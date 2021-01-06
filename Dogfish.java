@@ -37,7 +37,11 @@ public class Dogfish {
     }
 
     public static int[] ponder(Board b, int depth, double alpha,double beta) {
-        ArrayList<int[]> moves = b.getArrayMoves();
+        HashSet<String> tempo= b.legalMoves;
+        ArrayList<int[]> moves = new ArrayList<>();
+        for(String s:tempo){
+            moves.add(b.getMove(s));
+        }
         if(moves.size()==0){
             return new int[]{-1,0,0,0};
         }
