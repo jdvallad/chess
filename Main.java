@@ -1,5 +1,7 @@
 import processing.core.*;
 
+import java.util.*;
+
 public class Main extends PApplet {
     float widthP;
     float heightP;
@@ -11,6 +13,7 @@ public class Main extends PApplet {
     SoundPlayer soundPlayer;
     char[][] pieceBoard;
     boolean startupFlag = false;
+    ArrayList<String> moves;
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -30,7 +33,7 @@ public class Main extends PApplet {
     public void settings() {
         fullScreen();
         widthP = (float) displayWidth / 1920f;
-        heightP =  (float) displayHeight/ 1080f;
+        heightP = (float) displayHeight / 1080f;
         soundPlayer = new SoundPlayer();
         images = new PImage[20];
         sounds = new String[9];
@@ -80,45 +83,58 @@ public class Main extends PApplet {
         drawScreen();
         tempImage = get();
         startupFlag = true;
+        moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "h1f1", "f8e7"));
     }
 
     public void draw() {
         if (!startupFlag) {
             initialStartup();
+            return;
         }
-        if(!mousePressed && mouseOnBoard() && move.length() == 0){
-            int x = (int) ((( (mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((( (mouseY)) - 28 * heightP) / (128 * heightP));
-            if(pieceBoard[y][x] != ' '){
-                background(tempImage);
-                tempImage = get();
-                fill(13, 213, 252, 80);
-                strokeWeight(0);
-                rect(447 + 128 * x, 27 + 128 * y, 129, 129);
-            }
+        if (moves.size() != 0) {
+            delay(1000);
+            move = moves.remove(0);
         }
-        if (mousePressed && mouseButton == LEFT && move.length() == 2) {
+        if (lookingForPickupPiece())
+            drawSelectionHighlight();
+
+        if (holdingPiece())
             drawFloatingPiece(move);
-        }
-        if (move.length() == 4) {
+
+        if (move.length() == 4)
             makeMove(move);
-            move = "";
-        }
-        print("\r\n" + move);
-        //print("\r\n"+convertFileToInt('a')+" "+(8-1));
+    }
+
+    public boolean lookingForPickupPiece() {
+        return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[(int) ((((mouseY)) - 28 * heightP)
+                / (128 * heightP))][(int) ((((mouseX)) - 448 * widthP) / (128 * widthP))] != ' ');
+    }
+
+    public boolean holdingPiece() {
+        return mousePressed && mouseButton == LEFT && move.length() == 2;
+    }
+
+    public void drawSelectionHighlight() {
+        background(tempImage);
+        tempImage = get();
+        fill(13, 213, 252, 80);
+        strokeWeight(0);
+        rect(447 + 128 * (int) ((((mouseX)) - 448 * widthP) / (128 * widthP)), 27 + 128 * (int) ((((mouseY)) - 28 * heightP)
+                / (128 * heightP)), 129, 129);
     }
 
     public boolean mouseOnBoard() {
-        return 448 * widthP < ((mouseX)) && ( (mouseX)) < 1472 * widthP && 28 * heightP < ( (mouseY)) && ((mouseY)) < 1052 * heightP;
+        return 448 * widthP < ((mouseX)) && ((mouseX)) < 1472 * widthP && 28 * heightP < ((mouseY)) && ((mouseY)) < 1052 * heightP;
     }
+
     public void mouseReleased() {
 
         if (move.length() == 2) {
             if (mouseOnBoard()) {
 
-                int x = (int) ((( (mouseX)) - 448 * widthP) / (128 * widthP));
+                int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
                 char xFile = (char) (97 + x);
-                int y = (int) ((( (mouseY)) - 28 * heightP) / (128 * heightP));
+                int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
                 int yRank = 8 - y;
                 if ((move.equals("" + xFile + yRank))) {
                     move = "";
@@ -138,9 +154,9 @@ public class Main extends PApplet {
         if (mouseOnBoard() && mouseButton == LEFT && move.length() == 0) {
             background(tempImage);
             tempImage = get();
-            int x = (int) ((( (mouseX)) - 448 * widthP) / (128 * widthP));
+            int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
             char xFile = (char) (97 + x);
-            int y = (int) ((( (mouseY)) - 28 * heightP) / (128 * heightP));
+            int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
             int yRank = 8 - y;
             if (getPiece("" + xFile + yRank) != ' ') {
                 move = "" + xFile + yRank;
@@ -239,15 +255,18 @@ public class Main extends PApplet {
         }
         fill(13, 213, 252, 80);
         strokeWeight(0);
-        int x = (int) ((( (mouseX)) - 448 * widthP) / (128 * widthP));
-        int y = (int) ((( (mouseY)) - 28 * heightP) / (128 * heightP));
-        rect(447 + 128 * x, 27 + 128 * y, 129, 129);
+        int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+        int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+        if (mouseOnBoard()) {
+            rect(447 + 128 * x, 27 + 128 * y, 129, 129);
+        }
         image(images[temp + (team == 0 ? 0 : 1)], mouseX - 64, mouseY - 64, 128, 128);
     }
 
     public void makeMove(String m) {
         setPiece(m.substring(2), getPiece(m.substring(0, 2)));
         setPiece(m.substring(0, 2), ' ');
+        move = "";
         drawScreen();
     }
 
