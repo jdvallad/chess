@@ -4,8 +4,7 @@ import java.io.Serializable;
 
 @SuppressWarnings("SpellCheckingInspection")
 public class Board implements Serializable {
-    public double[][] pawnTable, rookTable, knightTable, bishopTable, queenTable, kingMiddleTable, kingEndTable;
-    final String[] PIECES = {"rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"};
+    private final String[] PIECES = {"rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"};
     public int repeatedPosition, gameResult, movesSinceLastCapture;
     public int[] lastMove;
     public final int[] lastLastMove;
@@ -13,6 +12,7 @@ public class Board implements Serializable {
     public final Piece[][] pieces;
     public boolean turn;
     public int turnCount = 1;
+    private double[][] pawnTable, rookTable, knightTable, bishopTable, queenTable, kingMiddleTable, kingEndTable;
 
     public Board(String str) {
         if (str.length() == 0) {
@@ -246,6 +246,655 @@ public class Board implements Serializable {
         return Base64.getEncoder().encodeToString(new BigInteger(str.toString(), 2).toByteArray());
     }
 
+    public void makeMove(int[] move) {
+        update(move);
+        updateLegalMoves();
+    }
+
+    public String getMoveName(int[] move) {
+        Board tempBoard = nextBoard(move);
+        Piece tempPiece = pieces[move[0]][move[1]];
+        boolean capture = !pieces[move[2]][move[3]].isSquare();
+        boolean ambiguous = ambiguousMoveName(move);
+        String res = "";
+        if (ambiguous) {
+            res += convertToRank(move[0]);
+            res += (8 - move[1]);
+        }
+        switch (tempPiece.name) {
+            case "square":
+                break;
+            case "pawn":
+                if (capture || enPassant(move)) {
+                    res += convertToRank(tempPiece.rank);
+                }
+                break;
+            case "rook":
+                res += "R";
+                break;
+            case "knight":
+                res += "N";
+                break;
+            case "bishop":
+                res += "B";
+                break;
+            case "queen":
+                res += "Q";
+                break;
+            case "king":
+                if (castled(move)) {
+                    if (move[2] == 2) {
+                        res += "O-O-O";
+                    } else {
+                        res += "O-O";
+                    }
+                    if (tempBoard.inCheck()) {
+                        if (tempBoard.noMoves()) {
+                            res += "#";
+                        } else {
+                            res += "+";
+                        }
+                    }
+                    return res;
+                } else {
+                    res += "K";
+                }
+                break;
+        }
+        if (capture || enPassant(move)) {
+            res += "x";
+        }
+        res += convertToRank(move[2]);
+        res += (8 - move[3]);
+        if (tempPiece.isPawn() && move[3] == (7 * tempPiece.team)) {
+            res += "=Q";
+        }
+        if (tempBoard.inCheck()) {
+            if (tempBoard.noMoves()) {
+                res += "#";
+            } else {
+                res += "+";
+            }
+        }
+        return res;
+    }
+
+    public double evaluate() {
+        double eval = 0.;
+        double absEval = 0;
+        double temp1;
+        for (int r = 0; r < pieces.length; r++) {
+            for (int c = 0; c < pieces[r].length; c++) {
+                Piece temp = pieces[r][c];
+                int i = temp.team == 0 ? c : 7 - c;
+                switch (temp.name) {
+                    case "square":
+                        break;
+                    case "king":
+                        if (endGame()) {
+                            temp1 = (100. + (kingMiddleTable[r][i] / 100.));
+                        } else {
+                            temp1 = (100. + (kingEndTable[r][i] / 100.));
+                        }
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                    case "pawn":
+                        temp1 = (1. + (pawnTable[r][i] / 100.));
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                    case "knight":
+                        temp1 = (3.2 + (knightTable[r][i] / 100.));
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                    case "bishop":
+                        temp1 = (3.3 + (bishopTable[r][i] / 100.));
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                    case "rook":
+                        temp1 = (5. + (rookTable[r][i] / 100.));
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                    case "queen":
+                        temp1 = (9. + (queenTable[r][i] / 100.));
+                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
+                        absEval += temp1;
+                        break;
+                }
+            }
+        }
+        if (eval > 0) {
+            eval += 50. / absEval;
+        }
+        if (eval < 0) {
+            eval -= 50. / absEval;
+        }
+        if (noMoves()) {
+            if (inCheck()) {
+                gameResult = 0;
+                return turn ? -1000 : 1000;
+            } else {
+                gameResult = 1;
+                return 0;
+            }
+        }
+        if (movesSinceLastCapture >= 50) {
+            gameResult = 2;
+            return 0;
+        }
+        if (repeatedPosition >= 15) {
+            gameResult = 3;
+            return 0;
+        }
+        return eval;
+    }
+
+    public void developerUpdate(int[] move) {
+        int x = move[0];
+        int y = move[1];
+        int a = move[2];
+        int b = move[3];
+        int team;
+        if (x < 0) {
+            if (x == -3) {
+                team = 1;
+            } else {
+                team = 0;
+            }
+        } else {
+            team = pieces[x][y].team;
+        }
+        if (a == -3 && x >= 0) {
+            pieces[x][y] = new Piece("square", -1, a, b, 2);
+            return;
+        }
+        if (a < 0) {
+            return;
+        }
+        System.arraycopy(move, 0, lastMove, 0, 4);
+        if (x < 0) {
+            switch (y) {
+                case 1 -> {
+                    if (a == 4) {
+                        if (team == 0 && b == 7) {
+                            pieces[a][b] = new Piece("king", team, a, b, 2);
+                            return;
+                        }
+                        if (team == 1 && b == 0) {
+                            pieces[a][b] = new Piece("king", team, a, b, 2);
+                            return;
+                        }
+                        pieces[a][b] = new Piece("king", team, a, b, 0);
+                    } else {
+                        pieces[a][b] = new Piece("king", x == -2 ? 0 : 1, a, b, 0);
+                    }
+                }
+                case 2 -> pieces[a][b] = new Piece("queen", x == -2 ? 0 : 1, a, b, 2);
+                case 3 -> {
+                    if (team == 0) {
+                        if (a == 0 && b == 7) {
+                            pieces[a][b] = new Piece("rook", team, a, b, 2);
+                            return;
+                        }
+                        if (a == 7 && b == 7) {
+                            pieces[a][b] = new Piece("rook", team, a, b, 2);
+                            return;
+                        }
+                    } else {
+                        if (a == 0 && b == 0) {
+                            pieces[a][b] = new Piece("rook", team, a, b, 2);
+                            return;
+                        }
+                        if (a == 7 && b == 0) {
+                            pieces[a][b] = new Piece("rook", team, a, b, 2);
+                            return;
+                        }
+                    }
+                    pieces[a][b] = new Piece("rook", team, a, b, 0);
+                }
+                case 4 -> pieces[a][b] = new Piece("bishop", x == -2 ? 0 : 1, a, b, 2);
+                case 5 -> pieces[a][b] = new Piece("knight", x == -2 ? 0 : 1, a, b, 2);
+                case 6 -> {
+                    if (team == 0) {
+                        if (b == 6) {
+                            pieces[a][b] = new Piece("pawn", team, a, b, 2);
+                            return;
+                        }
+                    } else {
+                        if (b == 1) {
+                            pieces[a][b] = new Piece("pawn", team, a, b, 2);
+                            return;
+                        }
+                    }
+                    pieces[a][b] = new Piece("pawn", team, a, b, 0);
+                }
+            }
+        } else {
+            if (pieces[x][y].name.equals("king")) {
+                if (x == 4) {
+                    if (team == 0 && b == 7) {
+                        pieces[a][b] = new Piece("king", team, a, b, 2);
+                        return;
+                    }
+                    if (team == 1 && b == 0) {
+                        pieces[a][b] = new Piece("king", team, a, b, 2);
+                        return;
+                    }
+                    pieces[a][b] = new Piece("king", team, a, b, 0);
+                    return;
+                }
+            }
+            if (pieces[x][y].name.equals("rook")) {
+                if (team == 0) {
+                    if (a == 0 && b == 7) {
+                        pieces[a][b] = new Piece("rook", team, a, b, 2);
+                        return;
+                    }
+                    if (a == 7 && b == 7) {
+                        pieces[a][b] = new Piece("rook", team, a, b, 2);
+                        return;
+                    }
+                    pieces[a][b] = new Piece("rook", team, a, b, 0);
+                } else {
+                    if (a == 0 && b == 0) {
+                        pieces[a][b] = new Piece("rook", team, a, b, 2);
+                        return;
+                    }
+                    if (a == 7 && b == 0) {
+                        pieces[a][b] = new Piece("rook", team, a, b, 2);
+                        return;
+                    }
+                    pieces[a][b] = new Piece("rook", team, a, b, 0);
+                    return;
+                }
+            }
+            if (pieces[x][y].name.equals("pawn")) {
+                if (team == 0) {
+                    if (b == 6) {
+                        pieces[a][b] = new Piece("pawn", team, a, b, 2);
+                        return;
+                    }
+                } else {
+                    if (b == 1) {
+                        pieces[a][b] = new Piece("pawn", team, a, b, 2);
+                        return;
+                    }
+                }
+                pieces[a][b] = new Piece("pawn", team, a, b, 0);
+                return;
+            }
+            pieces[a][b] = new Piece(pieces[x][y].name, pieces[x][y].team, a, b, 2);
+        }
+    }
+
+    public String fenBuilder() {
+        StringBuilder result = new StringBuilder();
+        for (int c = 0; c < 8; c++) {
+            int count = 0;
+            for (int r = 0; r < 8; r++) {
+                if (pieces[r][c].isSquare()) {
+                    count++;
+                } else {
+                    if (count != 0) {
+                        result.append(count);
+                        count = 0;
+                    }
+                    String temp = "" + pieces[r][c].name.charAt(0);
+                    if (pieces[r][c].isKnight()) {
+                        temp = "n";
+                    }
+                    if (pieces[r][c].isWhite()) {
+                        temp = temp.toUpperCase();
+                    }
+                    result.append(temp);
+                }
+            }
+            if (count != 0) {
+                result.append(count);
+            }
+            if (c != 7) {
+                result.append("/");
+            }
+        }
+        result.append(turn ? " w " : " b ");
+        result.append(castledStr());
+        result.append(" ").append(lastEP()).append(" ");
+        result.append(movesSinceLastCapture).append(" ");
+        result.append(turnCount);
+        return result.toString();
+    }
+
+    public Board nextBoard(int[] move) {
+        Board res = new Board(this);
+        res.update(move);
+        return res;
+    }
+
+    public boolean noMoves() {
+        updateLegalMoves();
+        return legalMoves.size() == 0;
+    }
+
+    public boolean inCheck() {
+        String king = "";
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if ((!turn && pieces[r][c].team == 1 && pieces[r][c].name.equals("king"))
+                        || (turn && pieces[r][c].team == 0 && pieces[r][c].name.equals("king"))) {
+                    king = "" + r + "," + c;
+                }
+            }
+        }
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if ((turn && pieces[r][c].team == 1) || (!turn && pieces[r][c].team == 0)) {
+                    for (int i = 0; i < 8; i++) {
+                        for (int j = 0; j < 8; j++) {
+                            if (futureIsLegal(new int[]{r, c, i, j})) {
+                                if (("" + i + "," + j).equals(king)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public int[] kingPosition() {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (turn && pieces[r][c].isWhite() && pieces[r][c].isKing()) {
+                    return new int[]{r, c};
+                }
+                if ((!turn) && pieces[r][c].isBlack() && pieces[r][c].isKing()) {
+                    return new int[]{r, c};
+                }
+            }
+        }
+        return new int[]{};
+    }
+
+    public boolean futureInCheck() {
+        turn = !turn;
+        boolean res = inCheck();
+        turn = !turn;
+        return res;
+    }
+
+    public ArrayList<Board> getChildrenBoards() {
+        ArrayList<int[]> moves = getArrayMoves();
+        ArrayList<Board> res = new ArrayList<>();
+        for (int[] arr : moves) {
+            res.add(nextBoard(arr));
+        }
+        return res;
+    }
+
+    public int[] getMove(String str) {
+        int[] res = new int[4];
+        for (int i = 0; i < 4; i++) {
+            res[i] = Integer.parseInt("" + str.charAt(2 * i));
+        }
+        return res;
+    }
+
+    public String getName(int[] move) {
+        return "" + move[0] + " " + move[1] + " " + move[2] + " " + move[3] + " " + pieces[move[0]][move[1]].name + " " + pieces[move[2]][move[3]].name;
+    }
+
+    private boolean isLegal(int[] move) {
+        return pieces[move[0]][move[1]].isLegalMove(this, move[2], move[3]);
+    }
+
+    private boolean futureIsLegal(int[] move) {
+        turn = !turn;
+        boolean res = isLegal(move);
+        turn = !turn;
+        return res;
+    }
+
+    private ArrayList<int[]> getArrayMoves() {
+        ArrayList<int[]> capturesPositive = new ArrayList<>();
+        ArrayList<int[]> capturesNegative = new ArrayList<>();
+        ArrayList<int[]> nonCapturesNegative = new ArrayList<>();
+        ArrayList<int[]> nonCapturesPositive = new ArrayList<>();
+        ArrayList<int[]> pawnCapturesNegative = new ArrayList<>();
+        ArrayList<int[]> pawnCapturesPositive = new ArrayList<>();
+        ArrayList<int[]> pawnNonCapturesNegative = new ArrayList<>();
+        ArrayList<int[]> pawnNonCapturesPositive = new ArrayList<>();
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if ((turn && pieces[r][c].isWhite()) || (!turn && pieces[r][c].isBlack())) {
+                    for (int i = 0; i < 8; i++) {
+                        for (int j = 0; j < 8; j++) {
+                            int[] temp = new int[]{r, c, i, j};
+                            Board tempBoard = nextBoard(temp);
+                            if (isLegal(temp) && !tempBoard.futureInCheck()) {
+                                double eval = 0;
+                                switch (pieces[r][c].name) {
+                                    case "square":
+                                        break;
+                                    case "king":
+                                        if (endGame()) {
+                                            eval = kingMiddleTable[r][turn ? c : 7 - c] - kingMiddleTable[i][turn ? j : 7 - j];
+                                        } else {
+                                            eval = kingEndTable[r][turn ? c : 7 - c] - kingEndTable[i][turn ? j : 7 - j];
+                                        }
+
+                                        break;
+                                    case "pawn":
+                                        eval = pawnTable[r][turn ? c : 7 - c] - pawnTable[i][turn ? j : 7 - j];
+                                        break;
+                                    case "knight":
+                                        eval = knightTable[r][turn ? c : 7 - c] - knightTable[i][turn ? j : 7 - j];
+                                        break;
+                                    case "bishop":
+                                        eval = bishopTable[r][turn ? c : 7 - c] - bishopTable[i][turn ? j : 7 - j];
+                                        break;
+                                    case "rook":
+                                        eval = rookTable[r][turn ? c : 7 - c] - rookTable[i][turn ? j : 7 - j];
+                                        break;
+                                    case "queen":
+                                        eval = queenTable[r][turn ? c : 7 - c] - queenTable[i][turn ? j : 7 - j];
+                                        break;
+                                }
+
+                                if (pieces[i][j].team == -1) {
+                                    if ((turn && eval <= 0) || (!turn && eval >= 0)) {
+                                        if (pieces[r][c].isPawn()) {
+                                            pawnNonCapturesNegative.add(temp);
+                                        } else {
+                                            nonCapturesNegative.add(temp);
+                                        }
+                                    } else {
+                                        if (pieces[r][c].isPawn()) {
+                                            pawnNonCapturesPositive.add(temp);
+                                        } else {
+                                            nonCapturesPositive.add(temp);
+                                        }
+                                    }
+                                } else {
+                                    if ((turn && eval <= 0) || (!turn && eval >= 0)) {
+                                        if (pieces[r][c].isPawn()) {
+                                            pawnCapturesNegative.add(temp);
+                                        } else {
+                                            capturesNegative.add(temp);
+                                        }
+                                    } else {
+                                        if (pieces[r][c].isPawn()) {
+                                            pawnCapturesPositive.add(temp);
+                                        } else {
+                                            capturesPositive.add(temp);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Collections.shuffle(capturesPositive);
+        Collections.shuffle(capturesNegative);
+        Collections.shuffle(nonCapturesPositive);
+        Collections.shuffle(nonCapturesNegative);
+        Collections.shuffle(pawnNonCapturesPositive);
+        Collections.shuffle(pawnNonCapturesNegative);
+        Collections.shuffle(pawnCapturesPositive);
+        Collections.shuffle(pawnCapturesNegative);
+
+        pawnCapturesPositive.addAll(capturesPositive);
+        pawnCapturesPositive.addAll(pawnCapturesNegative);
+        pawnCapturesPositive.addAll(capturesNegative);
+        pawnCapturesPositive.addAll(pawnNonCapturesPositive);
+        pawnCapturesPositive.addAll(pawnNonCapturesNegative);
+        pawnCapturesPositive.addAll(nonCapturesPositive);
+        pawnCapturesPositive.addAll(nonCapturesNegative);
+        return pawnCapturesPositive;
+    }
+
+    private String lastEP() {
+        if (lastMove[0] == -1) {
+            return "-";
+        }
+        Piece temp = pieces[lastMove[2]][lastMove[3]];
+        if (temp.isPawn() && Math.abs(lastMove[3] - lastMove[1]) != 1) {
+            switch (lastMove[0]) {
+                case 0:
+                    return "a" + (temp.isWhite() ? "3" : "6");
+                case 1:
+                    return "b" + (temp.isWhite() ? "3" : "6");
+                case 2:
+                    return "c" + (temp.isWhite() ? "3" : "6");
+                case 3:
+                    return "d" + (temp.isWhite() ? "3" : "6");
+                case 4:
+                    return "e" + (temp.isWhite() ? "3" : "6");
+                case 5:
+                    return "f" + (temp.isWhite() ? "3" : "6");
+                case 6:
+                    return "g" + (temp.isWhite() ? "3" : "6");
+                case 7:
+                    return "h" + (temp.isWhite() ? "3" : "6");
+            }
+        }
+        return "-";
+    }
+
+    private void update(int[] move) {
+        if (!turn) {
+            turnCount++;
+        }
+        if ((lastLastMove[0] == move[2] && lastLastMove[1] == move[3] && lastLastMove[2] == move[0] && lastLastMove[3] == move[1])) {
+            repeatedPosition++;
+        } else {
+            repeatedPosition = 1;
+        }
+        for (int i = 0; i < 4; i++) {
+            lastLastMove[i] = lastMove[i];
+            lastMove[i] = move[i];
+        }
+        Piece temp = pieces[move[0]][move[1]];
+        int x = move[2];
+        int y = move[3];
+        if (enPassant(move)) {
+            pieces[x][y + (temp.team == 0 ? 1 : -1)] = new Piece("square", -1, x, y + (temp.team == 0 ? 1 : -1), 2);
+            movesSinceLastCapture = 0;
+        }
+        if (castled(move)) {
+            temp.hasMoved = 0;
+            if (x == 6) {
+                pieces[5][y] = new Piece("rook", temp.team, 5, y, 0);
+                pieces[7][y] = new Piece("square", -1, 7, y, 2);
+            }
+            if (x == 2) {
+                pieces[3][y] = new Piece("rook", temp.team, 3, y, 0);
+                pieces[0][y] = new Piece("square", -1, 0, y, 2);
+            }
+        }
+        if ((!temp.isPawn()) && pieces[x][y].isSquare()) {
+            movesSinceLastCapture++;
+        } else {
+            movesSinceLastCapture = 0;
+        }
+        pieces[x][y] = temp;
+        if (temp.isPawn() && y == (temp.team == 0 ? 0 : 7)) {
+            pieces[x][y] = new Piece("queen", temp.team, x, y, 0);
+        }
+        pieces[move[0]][move[1]] = new Piece("square", -1, move[0], move[1], 2);
+        temp.rank = x;
+        temp.file = y;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece temp1 = pieces[r][c];
+                if (temp1.hasMoved == 1 && temp1.sameColor(temp)) {
+                    temp1.hasMoved--;
+                }
+            }
+        }
+        if (pieces[move[2]][move[3]].hasMoved == 2) {
+            pieces[move[2]][move[3]].hasMoved--;
+        }
+        turn = !turn;
+    }
+
+    private boolean enPassant(int[] move) {
+        Piece p = pieces[move[0]][move[1]];
+        int x = move[2];
+        int y = move[3];
+        return (y + (p.isWhite() ? 1 : -1) <= 7)
+                &&
+                (0 <= y + (p.isWhite() ? 1 : -1))
+                &&
+                (pieces[x][y].isSquare())
+                &&
+                ((y == 5 && p.isBlack()) || (y == 2 && p.isWhite()))
+                &&
+                (pieces[x][y + (p.team == 0 ? 1 : -1)].isPawn())
+                &&
+                (pieces[x][y + (p.team == 0 ? 1 : -1)].hasMoved == 1);
+
+    }
+
+    private boolean castled(int[] move) {
+        Piece p = pieces[move[0]][move[1]];
+        int x = move[2];
+        return p.isKing() && (Math.abs(p.rank - x) == 2);
+    }
+
+    private String castledStr() {
+        String result = "";
+        Piece temp = pieces[4][7];
+        if (temp.isKing() && temp.hasMoved == 2) {
+            if (pieces[7][7].isRook() && pieces[7][7].hasMoved == 2) {
+                result += "K";
+            }
+            if (pieces[0][7].isRook() && pieces[0][7].hasMoved == 2) {
+                result += "Q";
+            }
+        }
+        temp = pieces[4][0];
+        if (temp.isKing() && temp.hasMoved == 2) {
+            if (pieces[7][0].isRook() && pieces[7][0].hasMoved == 2) {
+                result += "k";
+            }
+            if (pieces[0][0].isRook() && pieces[0][0].hasMoved == 2) {
+                result += "q";
+            }
+        }
+        if (result.equals("")) {
+            return "-";
+        }
+        return result;
+    }
+
     private void initializeBoard() {
         for (int r = 0; r < 8; r++) {
             pieces[r][0] = new Piece(PIECES[r], 1, r, 0, 2);
@@ -437,655 +1086,6 @@ public class Board implements Serializable {
             case 7 -> 'h';
             default -> ' ';
         };
-    }
-
-    public void makeMove(int[] move) {
-        update(move);
-        updateLegalMoves();
-    }
-
-    public String getMoveName(int[] move) {
-        Board tempBoard = nextBoard(move);
-        Piece tempPiece = pieces[move[0]][move[1]];
-        boolean capture = !pieces[move[2]][move[3]].isSquare();
-        boolean ambiguous = ambiguousMoveName(move);
-        String res = "";
-        if (ambiguous) {
-            res += convertToRank(move[0]);
-            res += (8 - move[1]);
-        }
-        switch (tempPiece.name) {
-            case "square":
-                break;
-            case "pawn":
-                if (capture || enPassant(move)) {
-                    res += convertToRank(tempPiece.rank);
-                }
-                break;
-            case "rook":
-                res += "R";
-                break;
-            case "knight":
-                res += "N";
-                break;
-            case "bishop":
-                res += "B";
-                break;
-            case "queen":
-                res += "Q";
-                break;
-            case "king":
-                if (castled(move)) {
-                    if (move[2] == 2) {
-                        res += "O-O-O";
-                    } else {
-                        res += "O-O";
-                    }
-                    if (tempBoard.inCheck()) {
-                        if (tempBoard.noMoves()) {
-                            res += "#";
-                        } else {
-                            res += "+";
-                        }
-                    }
-                    return res;
-                } else {
-                    res += "K";
-                }
-                break;
-        }
-        if (capture || enPassant(move)) {
-            res += "x";
-        }
-        res += convertToRank(move[2]);
-        res += (8 - move[3]);
-        if (tempPiece.isPawn() && move[3] == (7 * tempPiece.team)) {
-            res += "=Q";
-        }
-        if (tempBoard.inCheck()) {
-            if (tempBoard.noMoves()) {
-                res += "#";
-            } else {
-                res += "+";
-            }
-        }
-        return res;
-    }
-
-    public double evaluate() {
-        double eval = 0.;
-        double absEval = 0;
-        double temp1;
-        for (int r = 0; r < pieces.length; r++) {
-            for (int c = 0; c < pieces[r].length; c++) {
-                Piece temp = pieces[r][c];
-                int i = temp.team == 0 ? c : 7 - c;
-                switch (temp.name) {
-                    case "square":
-                        break;
-                    case "king":
-                        if (endGame()) {
-                            temp1 = (100. + (kingMiddleTable[r][i] / 100.));
-                        } else {
-                            temp1 = (100. + (kingEndTable[r][i] / 100.));
-                        }
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                    case "pawn":
-                        temp1 = (1. + (pawnTable[r][i] / 100.));
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                    case "knight":
-                        temp1 = (3.2 + (knightTable[r][i] / 100.));
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                    case "bishop":
-                        temp1 = (3.3 + (bishopTable[r][i] / 100.));
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                    case "rook":
-                        temp1 = (5. + (rookTable[r][i] / 100.));
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                    case "queen":
-                        temp1 = (9. + (queenTable[r][i] / 100.));
-                        eval += temp1 * ((temp.team == 0) ? 1. : -1.);
-                        absEval += temp1;
-                        break;
-                }
-            }
-        }
-        if (eval > 0) {
-            eval += 50. / absEval;
-        }
-        if (eval < 0) {
-            eval -= 50. / absEval;
-        }
-        if (noMoves()) {
-            if (inCheck()) {
-                gameResult = 0;
-                return turn ? -1000 : 1000;
-            } else {
-                gameResult = 1;
-                return 0;
-            }
-        }
-        if (movesSinceLastCapture >= 50) {
-            gameResult = 2;
-            return 0;
-        }
-        if (repeatedPosition >= 15) {
-            gameResult = 3;
-            return 0;
-        }
-        return eval;
-    }
-
-    private boolean enPassant(int[] move) {
-        Piece p = pieces[move[0]][move[1]];
-        int x = move[2];
-        int y = move[3];
-        return (y + (p.isWhite() ? 1 : -1) <= 7)
-                &&
-                (0 <= y + (p.isWhite() ? 1 : -1))
-                &&
-                (pieces[x][y].isSquare())
-                &&
-                ((y == 5 && p.isBlack()) || (y == 2 && p.isWhite()))
-                &&
-                (pieces[x][y + (p.team == 0 ? 1 : -1)].isPawn())
-                &&
-                (pieces[x][y + (p.team == 0 ? 1 : -1)].hasMoved == 1);
-
-    }
-
-    private boolean castled(int[] move) {
-        Piece p = pieces[move[0]][move[1]];
-        int x = move[2];
-        return p.isKing() && (Math.abs(p.rank - x) == 2);
-    }
-
-    private String castledStr() {
-        String result = "";
-        Piece temp = pieces[4][7];
-        if (temp.isKing() && temp.hasMoved == 2) {
-            if (pieces[7][7].isRook() && pieces[7][7].hasMoved == 2) {
-                result += "K";
-            }
-            if (pieces[0][7].isRook() && pieces[0][7].hasMoved == 2) {
-                result += "Q";
-            }
-        }
-        temp = pieces[4][0];
-        if (temp.isKing() && temp.hasMoved == 2) {
-            if (pieces[7][0].isRook() && pieces[7][0].hasMoved == 2) {
-                result += "k";
-            }
-            if (pieces[0][0].isRook() && pieces[0][0].hasMoved == 2) {
-                result += "q";
-            }
-        }
-        if (result.equals("")) {
-            return "-";
-        }
-        return result;
-    }
-
-    public void developerUpdate(int[] move) {
-        int x = move[0];
-        int y = move[1];
-        int a = move[2];
-        int b = move[3];
-        int team;
-        if (x < 0) {
-            if (x == -3) {
-                team = 1;
-            } else {
-                team = 0;
-            }
-        } else {
-            team = pieces[x][y].team;
-        }
-        if (a == -3 && x >= 0) {
-            pieces[x][y] = new Piece("square", -1, a, b, 2);
-            return;
-        }
-        if (a < 0) {
-            return;
-        }
-        System.arraycopy(move, 0, lastMove, 0, 4);
-        if (x < 0) {
-            switch (y) {
-                case 1 -> {
-                    if (a == 4) {
-                        if (team == 0 && b == 7) {
-                            pieces[a][b] = new Piece("king", team, a, b, 2);
-                            return;
-                        }
-                        if (team == 1 && b == 0) {
-                            pieces[a][b] = new Piece("king", team, a, b, 2);
-                            return;
-                        }
-                        pieces[a][b] = new Piece("king", team, a, b, 0);
-                    } else {
-                        pieces[a][b] = new Piece("king", x == -2 ? 0 : 1, a, b, 0);
-                    }
-                }
-                case 2 -> pieces[a][b] = new Piece("queen", x == -2 ? 0 : 1, a, b, 2);
-                case 3 -> {
-                    if (team == 0) {
-                        if (a == 0 && b == 7) {
-                            pieces[a][b] = new Piece("rook", team, a, b, 2);
-                            return;
-                        }
-                        if (a == 7 && b == 7) {
-                            pieces[a][b] = new Piece("rook", team, a, b, 2);
-                            return;
-                        }
-                    } else {
-                        if (a == 0 && b == 0) {
-                            pieces[a][b] = new Piece("rook", team, a, b, 2);
-                            return;
-                        }
-                        if (a == 7 && b == 0) {
-                            pieces[a][b] = new Piece("rook", team, a, b, 2);
-                            return;
-                        }
-                    }
-                    pieces[a][b] = new Piece("rook", team, a, b, 0);
-                }
-                case 4 -> pieces[a][b] = new Piece("bishop", x == -2 ? 0 : 1, a, b, 2);
-                case 5 -> pieces[a][b] = new Piece("knight", x == -2 ? 0 : 1, a, b, 2);
-                case 6 -> {
-                    if (team == 0) {
-                        if (b == 6) {
-                            pieces[a][b] = new Piece("pawn", team, a, b, 2);
-                            return;
-                        }
-                    } else {
-                        if (b == 1) {
-                            pieces[a][b] = new Piece("pawn", team, a, b, 2);
-                            return;
-                        }
-                    }
-                    pieces[a][b] = new Piece("pawn", team, a, b, 0);
-                }
-            }
-        } else {
-            if (pieces[x][y].name.equals("king")) {
-                if (x == 4) {
-                    if (team == 0 && b == 7) {
-                        pieces[a][b] = new Piece("king", team, a, b, 2);
-                        return;
-                    }
-                    if (team == 1 && b == 0) {
-                        pieces[a][b] = new Piece("king", team, a, b, 2);
-                        return;
-                    }
-                    pieces[a][b] = new Piece("king", team, a, b, 0);
-                    return;
-                }
-            }
-            if (pieces[x][y].name.equals("rook")) {
-                if (team == 0) {
-                    if (a == 0 && b == 7) {
-                        pieces[a][b] = new Piece("rook", team, a, b, 2);
-                        return;
-                    }
-                    if (a == 7 && b == 7) {
-                        pieces[a][b] = new Piece("rook", team, a, b, 2);
-                        return;
-                    }
-                    pieces[a][b] = new Piece("rook", team, a, b, 0);
-                } else {
-                    if (a == 0 && b == 0) {
-                        pieces[a][b] = new Piece("rook", team, a, b, 2);
-                        return;
-                    }
-                    if (a == 7 && b == 0) {
-                        pieces[a][b] = new Piece("rook", team, a, b, 2);
-                        return;
-                    }
-                    pieces[a][b] = new Piece("rook", team, a, b, 0);
-                    return;
-                }
-            }
-            if (pieces[x][y].name.equals("pawn")) {
-                if (team == 0) {
-                    if (b == 6) {
-                        pieces[a][b] = new Piece("pawn", team, a, b, 2);
-                        return;
-                    }
-                } else {
-                    if (b == 1) {
-                        pieces[a][b] = new Piece("pawn", team, a, b, 2);
-                        return;
-                    }
-                }
-                pieces[a][b] = new Piece("pawn", team, a, b, 0);
-                return;
-            }
-            pieces[a][b] = new Piece(pieces[x][y].name, pieces[x][y].team, a, b, 2);
-        }
-    }
-
-    public String fenBuilder() {
-        StringBuilder result = new StringBuilder();
-        for (int c = 0; c < 8; c++) {
-            int count = 0;
-            for (int r = 0; r < 8; r++) {
-                if (pieces[r][c].isSquare()) {
-                    count++;
-                } else {
-                    if (count != 0) {
-                        result.append(count);
-                        count = 0;
-                    }
-                    String temp = "" + pieces[r][c].name.charAt(0);
-                    if (pieces[r][c].isKnight()) {
-                        temp = "n";
-                    }
-                    if (pieces[r][c].isWhite()) {
-                        temp = temp.toUpperCase();
-                    }
-                    result.append(temp);
-                }
-            }
-            if (count != 0) {
-                result.append(count);
-            }
-            if (c != 7) {
-                result.append("/");
-            }
-        }
-        result.append(turn ? " w " : " b ");
-        result.append(castledStr());
-        result.append(" ").append(lastEP()).append(" ");
-        result.append(movesSinceLastCapture).append(" ");
-        result.append(turnCount);
-        return result.toString();
-    }
-
-    private String lastEP() {
-        if (lastMove[0] == -1) {
-            return "-";
-        }
-        Piece temp = pieces[lastMove[2]][lastMove[3]];
-        if (temp.isPawn() && Math.abs(lastMove[3] - lastMove[1]) != 1) {
-            switch (lastMove[0]) {
-                case 0:
-                    return "a" + (temp.isWhite() ? "3" : "6");
-                case 1:
-                    return "b" + (temp.isWhite() ? "3" : "6");
-                case 2:
-                    return "c" + (temp.isWhite() ? "3" : "6");
-                case 3:
-                    return "d" + (temp.isWhite() ? "3" : "6");
-                case 4:
-                    return "e" + (temp.isWhite() ? "3" : "6");
-                case 5:
-                    return "f" + (temp.isWhite() ? "3" : "6");
-                case 6:
-                    return "g" + (temp.isWhite() ? "3" : "6");
-                case 7:
-                    return "h" + (temp.isWhite() ? "3" : "6");
-            }
-        }
-        return "-";
-    }
-
-    private void update(int[] move) {
-        if (!turn) {
-            turnCount++;
-        }
-        if ((lastLastMove[0] == move[2] && lastLastMove[1] == move[3] && lastLastMove[2] == move[0] && lastLastMove[3] == move[1])) {
-            repeatedPosition++;
-        } else {
-            repeatedPosition = 1;
-        }
-        for (int i = 0; i < 4; i++) {
-            lastLastMove[i] = lastMove[i];
-            lastMove[i] = move[i];
-        }
-        Piece temp = pieces[move[0]][move[1]];
-        int x = move[2];
-        int y = move[3];
-        if (enPassant(move)) {
-            pieces[x][y + (temp.team == 0 ? 1 : -1)] = new Piece("square", -1, x, y + (temp.team == 0 ? 1 : -1), 2);
-            movesSinceLastCapture = 0;
-        }
-        if (castled(move)) {
-            temp.hasMoved = 0;
-            if (x == 6) {
-                pieces[5][y] = new Piece("rook", temp.team, 5, y, 0);
-                pieces[7][y] = new Piece("square", -1, 7, y, 2);
-            }
-            if (x == 2) {
-                pieces[3][y] = new Piece("rook", temp.team, 3, y, 0);
-                pieces[0][y] = new Piece("square", -1, 0, y, 2);
-            }
-        }
-        if ((!temp.isPawn()) && pieces[x][y].isSquare()) {
-            movesSinceLastCapture++;
-        } else {
-            movesSinceLastCapture = 0;
-        }
-        pieces[x][y] = temp;
-        if (temp.isPawn() && y == (temp.team == 0 ? 0 : 7)) {
-            pieces[x][y] = new Piece("queen", temp.team, x, y, 0);
-        }
-        pieces[move[0]][move[1]] = new Piece("square", -1, move[0], move[1], 2);
-        temp.rank = x;
-        temp.file = y;
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                Piece temp1 = pieces[r][c];
-                if (temp1.hasMoved == 1 && temp1.sameColor(temp)) {
-                    temp1.hasMoved--;
-                }
-            }
-        }
-        if (pieces[move[2]][move[3]].hasMoved == 2) {
-            pieces[move[2]][move[3]].hasMoved--;
-        }
-        turn = !turn;
-    }
-
-    public Board nextBoard(int[] move) {
-        Board res = new Board(this);
-        res.update(move);
-        return res;
-    }
-
-    public boolean noMoves() {
-        updateLegalMoves();
-        return legalMoves.size() == 0;
-    }
-
-    public boolean inCheck() {
-        String king = "";
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if ((!turn && pieces[r][c].team == 1 && pieces[r][c].name.equals("king"))
-                        || (turn && pieces[r][c].team == 0 && pieces[r][c].name.equals("king"))) {
-                    king = "" + r + "," + c;
-                }
-            }
-        }
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if ((turn && pieces[r][c].team == 1) || (!turn && pieces[r][c].team == 0)) {
-                    for (int i = 0; i < 8; i++) {
-                        for (int j = 0; j < 8; j++) {
-                            if (futureIsLegal(new int[]{r, c, i, j})) {
-                                if (("" + i + "," + j).equals(king)) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    public int[] kingPosition() {
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if (turn && pieces[r][c].isWhite() && pieces[r][c].isKing()) {
-                    return new int[]{r, c};
-                }
-                if ((!turn) && pieces[r][c].isBlack() && pieces[r][c].isKing()) {
-                    return new int[]{r, c};
-                }
-            }
-        }
-        return new int[]{};
-    }
-
-    public boolean futureInCheck() {
-        turn = !turn;
-        boolean res = inCheck();
-        turn = !turn;
-        return res;
-    }
-
-    private boolean futureIsLegal(int[] move) {
-        turn = !turn;
-        boolean res = isLegal(move);
-        turn = !turn;
-        return res;
-    }
-
-    private ArrayList<int[]> getArrayMoves() {
-        ArrayList<int[]> capturesPositive = new ArrayList<>();
-        ArrayList<int[]> capturesNegative = new ArrayList<>();
-        ArrayList<int[]> nonCapturesNegative = new ArrayList<>();
-        ArrayList<int[]> nonCapturesPositive = new ArrayList<>();
-        ArrayList<int[]> pawnCapturesNegative = new ArrayList<>();
-        ArrayList<int[]> pawnCapturesPositive = new ArrayList<>();
-        ArrayList<int[]> pawnNonCapturesNegative = new ArrayList<>();
-        ArrayList<int[]> pawnNonCapturesPositive = new ArrayList<>();
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if ((turn && pieces[r][c].isWhite()) || (!turn && pieces[r][c].isBlack())) {
-                    for (int i = 0; i < 8; i++) {
-                        for (int j = 0; j < 8; j++) {
-                            int[] temp = new int[]{r, c, i, j};
-                            Board tempBoard = nextBoard(temp);
-                            if (isLegal(temp) && !tempBoard.futureInCheck()) {
-                                double eval = 0;
-                                switch (pieces[r][c].name) {
-                                    case "square":
-                                        break;
-                                    case "king":
-                                        if (endGame()) {
-                                            eval = kingMiddleTable[r][turn ? c : 7 - c] - kingMiddleTable[i][turn ? j : 7 - j];
-                                        } else {
-                                            eval = kingEndTable[r][turn ? c : 7 - c] - kingEndTable[i][turn ? j : 7 - j];
-                                        }
-
-                                        break;
-                                    case "pawn":
-                                        eval = pawnTable[r][turn ? c : 7 - c] - pawnTable[i][turn ? j : 7 - j];
-                                        break;
-                                    case "knight":
-                                        eval = knightTable[r][turn ? c : 7 - c] - knightTable[i][turn ? j : 7 - j];
-                                        break;
-                                    case "bishop":
-                                        eval = bishopTable[r][turn ? c : 7 - c] - bishopTable[i][turn ? j : 7 - j];
-                                        break;
-                                    case "rook":
-                                        eval = rookTable[r][turn ? c : 7 - c] - rookTable[i][turn ? j : 7 - j];
-                                        break;
-                                    case "queen":
-                                        eval = queenTable[r][turn ? c : 7 - c] - queenTable[i][turn ? j : 7 - j];
-                                        break;
-                                }
-
-                                if (pieces[i][j].team == -1) {
-                                    if ((turn && eval <= 0) || (!turn && eval >= 0)) {
-                                        if (pieces[r][c].isPawn()) {
-                                            pawnNonCapturesNegative.add(temp);
-                                        } else {
-                                            nonCapturesNegative.add(temp);
-                                        }
-                                    } else {
-                                        if (pieces[r][c].isPawn()) {
-                                            pawnNonCapturesPositive.add(temp);
-                                        } else {
-                                            nonCapturesPositive.add(temp);
-                                        }
-                                    }
-                                } else {
-                                    if ((turn && eval <= 0) || (!turn && eval >= 0)) {
-                                        if (pieces[r][c].isPawn()) {
-                                            pawnCapturesNegative.add(temp);
-                                        } else {
-                                            capturesNegative.add(temp);
-                                        }
-                                    } else {
-                                        if (pieces[r][c].isPawn()) {
-                                            pawnCapturesPositive.add(temp);
-                                        } else {
-                                            capturesPositive.add(temp);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Collections.shuffle(capturesPositive);
-        Collections.shuffle(capturesNegative);
-        Collections.shuffle(nonCapturesPositive);
-        Collections.shuffle(nonCapturesNegative);
-        Collections.shuffle(pawnNonCapturesPositive);
-        Collections.shuffle(pawnNonCapturesNegative);
-        Collections.shuffle(pawnCapturesPositive);
-        Collections.shuffle(pawnCapturesNegative);
-
-        pawnCapturesPositive.addAll(capturesPositive);
-        pawnCapturesPositive.addAll(pawnCapturesNegative);
-        pawnCapturesPositive.addAll(capturesNegative);
-        pawnCapturesPositive.addAll(pawnNonCapturesPositive);
-        pawnCapturesPositive.addAll(pawnNonCapturesNegative);
-        pawnCapturesPositive.addAll(nonCapturesPositive);
-        pawnCapturesPositive.addAll(nonCapturesNegative);
-        return pawnCapturesPositive;
-    }
-
-    public ArrayList<Board> getChildrenBoards() {
-        ArrayList<int[]> moves = getArrayMoves();
-        ArrayList<Board> res = new ArrayList<>();
-        for (int[] arr : moves) {
-            res.add(nextBoard(arr));
-        }
-        return res;
-    }
-
-    public int[] getMove(String str) {
-        int[] res = new int[4];
-        for (int i = 0; i < 4; i++) {
-            res[i] = Integer.parseInt("" + str.charAt(2 * i));
-        }
-        return res;
-    }
-
-    public String getName(int[] move) {
-        return "" + move[0] + " " + move[1] + " " + move[2] + " " + move[3] + " " + pieces[move[0]][move[1]].name + " " + pieces[move[2]][move[3]].name;
-    }
-
-    public boolean isLegal(int[] move) {
-        return pieces[move[0]][move[1]].isLegalMove(this, move[2], move[3]);
     }
 
 }
