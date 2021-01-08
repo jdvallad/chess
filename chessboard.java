@@ -3,11 +3,35 @@ import java.util.*;
 
 import processing.core.*;
 
-public class chessboard {
+public class chessboard extends PApplet {
+    float widthP;
+    float heightP;
     PImage[] images;
     String[] sounds;
-    public void settings(){
+    SoundPlayer soundPlayer;
+
+    static public void main(String[] passedArgs) {
+        com.sun.javafx.application.PlatformImpl.startup(() -> {
+        });
+        try {
+            String[] appletArgs = new String[]{"--present", "--window-color=#666666", "--stop-color=#cccccc", "chessboard"};
+            if (passedArgs != null) {
+                PApplet.main(concat(appletArgs, passedArgs));
+            } else {
+                PApplet.main(appletArgs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void settings() {
+        fullScreen();
+        widthP = (float) ((float) displayWidth) / 1920f;
+        heightP = (float) ((float) displayHeight) / 1080f;
         soundPlayer = new SoundPlayer();
+        images = new PImage[18];
+        sounds = new String[9];
         sounds[0] = ("./data/sounds/game_start.mp3");
         soundPlayer.play(sounds[0]);
         sounds[1] = ("./data/sounds/game_end.mp3");
@@ -36,6 +60,26 @@ public class chessboard {
         images[15] = loadImage("./data/images/file_left.png");
         images[16] = loadImage("./data/images/file_right.png");
         images[17] = loadImage("./data/images/default_board.png");
-        return;
     }
+
+    public void rect(float a, float b, float c, float d) {
+        super.rect(widthP * a, heightP * b, widthP * c, heightP * d);
+    }
+
+    public void textSize(float s) {
+        super.textSize(widthP * s);
+    }
+
+    public void text(String s, float a, float b) {
+        super.text(s, widthP * a, heightP * b);
+    }
+
+    public void image(PImage img, float a, float b) {
+        super.image(img, widthP * a, heightP * b, widthP * img.width, widthP * img.height);
+    }
+
+    public void image(PImage img, float a, float b, float x, float y) {
+        super.image(img, widthP * a, heightP * b, widthP * x, widthP * y);
+    }
+    public void draw
 }

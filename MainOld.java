@@ -3,7 +3,7 @@ import java.util.*;
 
 import processing.core.*;
 
-public class Main extends PApplet {
+public class MainOld extends PApplet {
     float widthP;
     float heightP;
     boolean setupFlag = false;
