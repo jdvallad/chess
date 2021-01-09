@@ -23,7 +23,7 @@ public class SoundPlayer {
         MediaPlayer mediaPlayer = new MediaPlayer(hit);
         mediaPlayer.play();
         try{
-            Thread.sleep(10);
+            Thread.sleep(100);
         }catch(Exception ignored){}
     }
 

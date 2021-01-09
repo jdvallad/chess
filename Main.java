@@ -1,5 +1,7 @@
 import processing.core.*;
+import processing.sound.*;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class Main extends PApplet {
@@ -7,7 +9,6 @@ public class Main extends PApplet {
     float heightP;
     PImage[] images;
     PImage tempImage;
-    String[] sounds;
     String move = "";
     boolean flipped = false;
     SoundPlayer soundPlayer;
@@ -15,6 +16,11 @@ public class Main extends PApplet {
     boolean startupFlag = false;
     ArrayList<String> moves = new ArrayList<>();
     chessboard board;
+    SoundFile start;
+    SoundFile moveSound;
+    SoundFile capture;
+    SoundFile error;
+    boolean visualFlip = false;
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -37,41 +43,36 @@ public class Main extends PApplet {
         heightP = (float) displayHeight / 1080f;
         soundPlayer = new SoundPlayer();
         images = new PImage[20];
-        sounds = new String[9];
-        sounds[0] = ("./data/sounds/game_start.mp3");
-        soundPlayer.play(sounds[0]);
-        sounds[1] = ("./data/sounds/game_end.mp3");
-        sounds[2] = ("./data/sounds/move_self.mp3");
-        sounds[3] = ("./data/sounds/move_opponent.mp3");
-        sounds[4] = ("./data/sounds/move_capture.mp3");
-        sounds[5] = ("./data/sounds/move_check.mp3");
-        sounds[6] = ("./data/sounds/move_castle.mp3");
-        sounds[7] = ("./data/sounds/move_promote.mp3");
-        sounds[8] = ("./data/sounds/move_illegal.mp3");
-        images[0] = loadImage("./data/images/king_white.png");
-        images[1] = loadImage("./data/images/king_black.png");
-        images[2] = loadImage("./data/images/queen_white.png");
-        images[3] = loadImage("./data/images/queen_black.png");
-        images[4] = loadImage("./data/images/rook_white.png");
-        images[5] = loadImage("./data/images/rook_black.png");
-        images[6] = loadImage("./data/images/bishop_white.png");
-        images[7] = loadImage("./data/images/bishop_black.png");
-        images[8] = loadImage("./data/images/knight_white.png");
-        images[9] = loadImage("./data/images/knight_black.png");
-        images[10] = loadImage("./data/images/pawn_white.png");
-        images[11] = loadImage("./data/images/pawn_black.png");
-        images[12] = loadImage("./data/images/board.png");
-        images[13] = loadImage("./data/images/rank_top.png");
-        images[14] = loadImage("./data/images/rank_bottom.png");
-        images[15] = loadImage("./data/images/file_left.png");
-        images[16] = loadImage("./data/images/file_right.png");
-        images[17] = loadImage("./data/images/default_board.png");
-        images[18] = loadImage("./data/images/light_square.png");
-        images[19] = loadImage("./data/images/dark_square.png");
+        start = new SoundFile(this, "./data/sounds/start.mp3");
+        moveSound = new SoundFile(this, "./data/sounds/move.mp3");
+        capture = new SoundFile(this, "./data/sounds/capture.mp3");
+        error = new SoundFile(this, "./data/sounds/error.mp3");
+        String imageString = "lichess/";
+        images[0] = loadImage("./data/images/" + imageString + "wK.png");
+        images[1] = loadImage("./data/images/" + imageString + "bK.png");
+        images[2] = loadImage("./data/images/" + imageString + "wQ.png");
+        images[3] = loadImage("./data/images/" + imageString + "bQ.png");
+        images[4] = loadImage("./data/images/" + imageString + "wR.png");
+        images[5] = loadImage("./data/images/" + imageString + "bR.png");
+        images[6] = loadImage("./data/images/" + imageString + "wB.png");
+        images[7] = loadImage("./data/images/" + imageString + "bB.png");
+        images[8] = loadImage("./data/images/" + imageString + "wN.png");
+        images[9] = loadImage("./data/images/" + imageString + "bN.png");
+        images[10] = loadImage("./data/images/" + imageString + "wP.png");
+        images[11] = loadImage("./data/images/" + imageString + "bP.png");
+        images[12] = loadImage("./data/images/" + imageString + "board.png");
+        images[13] = loadImage("./data/images/" + imageString + "filler.png");//rank_top.png");
+        images[14] = loadImage("./data/images/" + imageString + "filler.png");//"rank_bottom.png");
+        images[15] = loadImage("./data/images/" + imageString + "filler.png");//"file_left.png");
+        images[16] = loadImage("./data/images/" + imageString + "filler.png");//"file_right.png");
+        images[17] = loadImage("./data/images/" + imageString + "filler.png");//"default_board.png");
+        images[18] = loadImage("./data/images/" + imageString + "light_square.png");
+        images[19] = loadImage("./data/images/" + imageString + "dark_square.png");
         pieceBoard = new char[8][8];
     }
 
     public void initialStartup() {
+        start.play();
         board = new chessboard();//"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
         setFromFEN(board.fen);
         drawScreen();
@@ -84,15 +85,37 @@ public class Main extends PApplet {
             initialStartup();
             return;
         }
-        move = moveInMoveList() ? moveFromList(1000) : getMove();
+       // if (board.turn.equals("black"))
+            //  move = randomMove();
+            move = moveInMoveList() ? moveFromList(1000) : getMove();
         if (moveReady()) {
             if (board.legalMoves.contains(move)) {
-                board.makeMove(move);
-                flipped = !flipped;
-                setFromFEN(board.fen);
+                doMove(move);
             }
             move = "";
         }
+    }
+
+    public String randomMove() {
+        ArrayList<String> temp = new ArrayList<>();
+        temp.addAll(board.legalMoves);
+        Collections.shuffle(temp);
+        if (temp.size() != 0) {
+            return temp.get(0);
+        }
+        return move;
+    }
+
+    public void doMove(String moveString) {
+        boolean b = board.isCapture(move);
+        board.makeMove(move);
+        if (board.legalMoves.size() == 0)
+            start.play();
+        else if (b)
+            capture.play();
+        else
+            moveSound.play();
+        setFromFEN(board.fen);
     }
 
     public String moveFromList(int a) {
@@ -157,7 +180,9 @@ public class Main extends PApplet {
                 index++;
             }
         }
-        flipped = last[1].equals("b");
+        if (visualFlip) {
+            flipped = last[1].equals("b");
+        }
         drawScreen();
         tempImage = get();
     }
@@ -253,9 +278,10 @@ public class Main extends PApplet {
     }
 
     public void drawScreen() {
+        tint(180);
         strokeWeight(0);
-        background(173, 216, 230);
-        fill(board.turn.equals("white") ? 255 : 0);
+        background((float) (173 * .5), (float) (216 * .5), (float) (230 * .5));
+        fill(board.turn.equals("white") ? 180 : 0);
         rect(448 - 20, 28 - 20, 1024 + 40, 1024 + 40);
         image(images[12], 448, 28, 1024, 1024);
         if (!flipped) {
@@ -278,7 +304,7 @@ public class Main extends PApplet {
         String lastMove = board.allMovesMade.size() != 0 ? board.allMovesMade.get(board.allMovesMade.size() - 1) : "";
         if (lastMove.length() == 0)
             return;
-        fill(250, 247, 39, 80);
+        fill(250, 247, 39, 30);
         strokeWeight(0);
         int a = convertFileToInt(lastMove.charAt(0));
         int b = 8 - Integer.parseInt("" + lastMove.charAt(1));
@@ -354,7 +380,7 @@ public class Main extends PApplet {
         background(tempImage);
         image(images[(r + c) % 2 == 0 ? 18 : 19], 448 + 128 * c, 28 + 128 * r, 128, 128);
         if ((!lastMove.equals("")) && (location.equals(lastMove.substring(0, 2)) || location.equals(lastMove.substring(2)))) {
-            fill(250, 247, 39, 80);
+            fill(250, 247, 39, 30);
             strokeWeight(0);
             rect(447 + 128 * c, 27 + 128 * r, 129, 129);
         }
@@ -374,9 +400,9 @@ public class Main extends PApplet {
                     r1 = 7 - r1;
                     c1 = 7 - c1;
                 }
-                fill(13, 213, 252, 80);
+                fill(30, 80);
                 strokeWeight(0);
-                rect(447 + 128 * c1, 27 + 128 * r1, 129, 129);
+                circle(64 + 447 + 128 * c1, 64 + 27 + 128 * r1, 50);
             }
         }
     }

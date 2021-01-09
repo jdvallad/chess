@@ -888,16 +888,16 @@ public class chessboard {
         HashSet<String> temp = updatePsuedoLegalMoves();
         turn = turn.equals("white") ? "black" : "white";
         for (String str : temp) {
-            if (res.contains("e1g1") && str.substring(2).equals("g1") ||str.substring(2).equals("f1") ) {
+            if (res.contains("e1g1") && str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck()) {
                 res.remove("e1g1");
             }
-            if (res.contains("e1c1") && str.substring(2).equals("d1") ||str.substring(2).equals("c1") ) {
+            if (res.contains("e1c1") && str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck()) {
                 res.remove("e1c1");
             }
-            if (res.contains("e8g8") && str.substring(2).equals("g8") ||str.substring(2).equals("f8") ) {
+            if (res.contains("e8g8") && str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck()) {
                 res.remove("e8g8");
             }
-            if (res.contains("e8c8") && str.substring(2).equals("d8") ||str.substring(2).equals("c8") ) {
+            if (res.contains("e8c8") && str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck()) {
                 res.remove("e8c8");
             }
         }
@@ -1146,5 +1146,9 @@ public class chessboard {
             return pieces(c) & nw(whiteOccupied() | ep);
         }
         return 0L;
+    }
+
+    public boolean isCapture(String s) {
+        return (pieceAt(s.substring(2)) != ' ') || (s.substring(2).equals(enPassant) && (Character.toLowerCase(pieceAt(s.substring(0, 2))) == 'p'));
     }
 }
