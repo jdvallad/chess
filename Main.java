@@ -9,11 +9,11 @@ public class Main extends PApplet {
     PImage tempImage;
     String[] sounds;
     String move = "";
-    String lastMove = "";
     SoundPlayer soundPlayer;
     char[][] pieceBoard;
     boolean startupFlag = false;
-    ArrayList<String> moves;
+    ArrayList<String> moves = new ArrayList<>();
+    chessboard board;
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -79,11 +79,20 @@ public class Main extends PApplet {
         };
     }
 
+    public void keyPressed() {
+        if (key == ESC) {
+            key = 0;
+            reset();
+        }
+    }
+
     public void initialStartup() {
+        board = new chessboard("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+        setFromFEN(board.fen);
         drawScreen();
         tempImage = get();
         startupFlag = true;
-        moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "h1f1", "f8e7"));
+        // moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "f8e7", "d2d4", "e8g8", "d4e5"));
     }
 
     public void draw() {
@@ -91,18 +100,69 @@ public class Main extends PApplet {
             initialStartup();
             return;
         }
-        if (moves.size() != 0) {
-            delay(1000);
-            move = moves.remove(0);
-        }
+        move = playFromList(1000);
         if (lookingForPickupPiece())
             drawSelectionHighlight();
 
         if (holdingPiece())
             drawFloatingPiece(move);
 
-        if (move.length() == 4)
-            makeMove(move);
+        if (move.length() == 4) {
+            board.makeMove(move);
+            setFromFEN(board.fen);
+            move = "";
+        }
+    }
+
+    public String playFromList(int a) {
+        if (moves.size() != 0) {
+            delay(a);
+            return moves.remove(0);
+        }
+        return move;
+    }
+
+    public void clear() {
+        board.clear();
+        setFromFEN(board.fen);
+    }
+    public void reset(){
+        board.reset();
+        setFromFEN(board.fen);
+    }
+    public void setFromFEN(String f) {
+        String[] fen = f.split("/");
+        for (int i = 0; i < 7; i++) {
+            int index = 0;
+            for (char c : fen[i].toCharArray()) {
+                if (c >= '1' && c <= '8') {
+                    int t = Integer.parseInt("" + c);
+                    for (int q = 0; q < t; q++) {
+                        pieceBoard[i][index] = ' ';
+                        index++;
+                    }
+                } else {
+                    pieceBoard[i][index] = c;
+                    index++;
+                }
+            }
+        }
+        String[] last = fen[7].split(" ");
+        int index = 0;
+        for (char c : last[0].toCharArray()) {
+            if (c >= '1' && c <= '8') {
+                int t = Integer.parseInt("" + c);
+                for (int i = 0; i < t; i++) {
+                    pieceBoard[7][index] = ' ';
+                    index++;
+                }
+            } else {
+                pieceBoard[7][index] = c;
+                index++;
+            }
+        }
+        drawScreen();
+        tempImage = get();
     }
 
     public boolean lookingForPickupPiece() {
@@ -141,7 +201,6 @@ public class Main extends PApplet {
                     background(tempImage);
                 } else {
                     move += "" + xFile + yRank;
-                    lastMove = move;
                 }
             } else {
                 move = "";
@@ -167,7 +226,7 @@ public class Main extends PApplet {
     public void drawScreen() {
         strokeWeight(0);
         background(173, 216, 230);
-        fill(255);//board.turn ? 255 : 0);
+        fill(board.turn.equals("white") ? 255 : 0);
         rect(448 - 20, 28 - 20, 1024 + 40, 1024 + 40);
         image(images[12], 448, 28, 1024, 1024);
         image(images[15], 448, 28);
@@ -181,8 +240,8 @@ public class Main extends PApplet {
         tempImage = get();
     }
 
-
     public void drawLastMove() {
+        String lastMove = board.allMovesMade.size() != 0 ? board.allMovesMade.get(board.allMovesMade.size() - 1) : "";
         if (lastMove.length() == 0) {
             return;
         }
@@ -225,6 +284,7 @@ public class Main extends PApplet {
     }
 
     public void drawFloatingPiece(String location) {
+        String lastMove = board.allMovesMade.size() != 0 ? board.allMovesMade.get(board.allMovesMade.size() - 1) : "";
         int r = 8 - Integer.parseInt("" + location.charAt(1));
         int c = convertFileToInt(location.charAt(0));
         String name = ("" + pieceBoard[r][c]);
@@ -280,6 +340,10 @@ public class Main extends PApplet {
         int x = convertFileToInt(s.charAt(0));
         int y = 8 - Integer.parseInt("" + s.charAt(1));
         return pieceBoard[y][x];
+    }
+
+    public char getPiece(int x, int y) {
+        return pieceBoard[x][y];
     }
 
     public void rect(float a, float b, float c, float d) {
