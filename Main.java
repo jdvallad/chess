@@ -9,6 +9,7 @@ public class Main extends PApplet {
     PImage tempImage;
     String[] sounds;
     String move = "";
+    boolean flipped = false;
     SoundPlayer soundPlayer;
     char[][] pieceBoard;
     boolean startupFlag = false;
@@ -76,9 +77,6 @@ public class Main extends PApplet {
         drawScreen();
         tempImage = get();
         startupFlag = true;
-        //chessboard.print(chessboard.longToString(chessboard.board_builder("e")));
-        println(chessboard.e("h4"));
-       // moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "f8e7", "d2d4", "e8g8", "d4e5"));
     }
 
     public void draw() {
@@ -87,10 +85,12 @@ public class Main extends PApplet {
             return;
         }
         move = moveInMoveList() ? moveFromList(1000) : getMove();
-
         if (moveReady()) {
-            board.makeMove(move);
-            setFromFEN(board.fen);
+            if (board.legalMoves.contains(move)) {
+                board.makeMove(move);
+                flipped = !flipped;
+                setFromFEN(board.fen);
+            }
             move = "";
         }
     }
@@ -157,13 +157,18 @@ public class Main extends PApplet {
                 index++;
             }
         }
+        flipped = last[1].equals("b");
         drawScreen();
         tempImage = get();
     }
 
     public boolean lookingForPickupPiece() {
-        return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[(int) ((((mouseY)) - 28 * heightP)
-                / (128 * heightP))][(int) ((((mouseX)) - 448 * widthP) / (128 * widthP))] != ' ');
+        int x = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+        int y = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+        if (flipped)
+            return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[7 - x][7 - y] != ' ');
+        else
+            return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[x][y] != ' ');
     }
 
     public boolean holdingPiece() {
@@ -173,10 +178,15 @@ public class Main extends PApplet {
     public void drawSelectionHighlight() {
         background(tempImage);
         tempImage = get();
-        fill(13, 213, 252, 80);
-        strokeWeight(0);
-        rect(447 + 128 * (int) ((((mouseX)) - 448 * widthP) / (128 * widthP)), 27 + 128 * (int) ((((mouseY)) - 28 * heightP)
-                / (128 * heightP)), 129, 129);
+        int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+        int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+        if (flipped) {
+            x = 7 - x;
+            y = 7 - y;
+        }
+        String s = "" + ((char) (x + 97)) + (8 - y);
+
+        showLegalMoves(s);
     }
 
     public boolean mouseOnBoard() {
@@ -205,8 +215,12 @@ public class Main extends PApplet {
             if (mouseOnBoard()) {
 
                 int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
-                char xFile = (char) (97 + x);
                 int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+                if (flipped) {
+                    x = 7 - x;
+                    y = 7 - y;
+                }
+                char xFile = (char) (97 + x);
                 int yRank = 8 - y;
                 if ((move.equals("" + xFile + yRank))) {
                     move = "";
@@ -226,9 +240,13 @@ public class Main extends PApplet {
             background(tempImage);
             tempImage = get();
             int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
-            char xFile = (char) (97 + x);
             int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+            if (flipped) {
+                x = 7 - x;
+                y = 7 - y;
+            }
             int yRank = 8 - y;
+            char xFile = (char) (97 + x);
             if (getPiece("" + xFile + yRank) != ' ')
                 move = "" + xFile + yRank;
         }
@@ -240,12 +258,18 @@ public class Main extends PApplet {
         fill(board.turn.equals("white") ? 255 : 0);
         rect(448 - 20, 28 - 20, 1024 + 40, 1024 + 40);
         image(images[12], 448, 28, 1024, 1024);
-        image(images[15], 448, 28);
-        image(images[14], 448, 1052 - 38);
+        if (!flipped) {
+            image(images[15], 448, 28);
+            image(images[14], 448, 1052 - 38);
+        } else {
+            image(images[13], 448, 1052 - 1024);
+            image(images[16], 448 - 35 + 1024, 28);
+        }
         drawLastMove();
         for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++)
+            for (int c = 0; c < 8; c++) {
                 drawPiece(r, c);
+            }
         }
         tempImage = get();
     }
@@ -260,6 +284,12 @@ public class Main extends PApplet {
         int b = 8 - Integer.parseInt("" + lastMove.charAt(1));
         int c = convertFileToInt(lastMove.charAt(2));
         int d = 8 - Integer.parseInt("" + lastMove.charAt(3));
+        if (flipped) {
+            a = 7 - a;
+            b = 7 - b;
+            c = 7 - c;
+            d = 7 - d;
+        }
         rect(447 + 128 * a, 27 + 128 * b, 129, 129);
         rect(447 + 128 * c, 27 + 128 * d, 129, 129);
     }
@@ -288,7 +318,10 @@ public class Main extends PApplet {
         } else {
             team = 1;
         }
-        image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * c, 28 + 128 * r, 128, 128);
+        if (flipped)
+            image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * (7 - c), 28 + 128 * (7 - r), 128, 128);
+        else
+            image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * c, 28 + 128 * r, 128, 128);
     }
 
     public void drawFloatingPiece(String location) {
@@ -296,6 +329,10 @@ public class Main extends PApplet {
         int r = 8 - Integer.parseInt("" + location.charAt(1));
         int c = convertFileToInt(location.charAt(0));
         String name = ("" + pieceBoard[r][c]);
+        if (flipped) {
+            r = 7 - r;
+            c = 7 - c;
+        }
         int temp = switch (name.toLowerCase()) {
             case "q" -> 2;
             case "r" -> 4;
@@ -321,14 +358,27 @@ public class Main extends PApplet {
             strokeWeight(0);
             rect(447 + 128 * c, 27 + 128 * r, 129, 129);
         }
-        fill(13, 213, 252, 80);
-        strokeWeight(0);
+
         int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
         int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
-        if (mouseOnBoard()) {
-            rect(447 + 128 * x, 27 + 128 * y, 129, 129);
-        }
+        showLegalMoves(location);
         image(images[temp + (team == 0 ? 0 : 1)], mouseX - 64, mouseY - 64, 128, 128);
+    }
+
+    public void showLegalMoves(String location) {
+        for (String str : board.legalMoves) {
+            if (str.substring(0, 2).equals(location)) {
+                int r1 = 8 - Integer.parseInt("" + str.charAt(3));
+                int c1 = convertFileToInt(str.charAt(2));
+                if (flipped) {
+                    r1 = 7 - r1;
+                    c1 = 7 - c1;
+                }
+                fill(13, 213, 252, 80);
+                strokeWeight(0);
+                rect(447 + 128 * c1, 27 + 128 * r1, 129, 129);
+            }
+        }
     }
 
     public void makeMove(String m) {

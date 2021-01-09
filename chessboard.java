@@ -66,40 +66,86 @@ public class chessboard {
         return "" + file(a) + rank(a);
     }
 
-    public static long n(long a) {
-        return a >>> 8 & fr(-1);
-    }
 
     public static String n(String s) {
-        if (s.charAt(1) == '8') {
-            System.out.println("Out of range!");
-            System.exit(0);
+        if (s.equals("-1") || s.charAt(1) >= '8') {
+            return "-1";
         }
         return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) + 1);
     }
 
     public static String s(String s) {
-        if (s.charAt(1) == '1') {
-            System.out.println("Out of range!");
-            System.exit(0);
+        if (s.equals("-1") || s.charAt(1) <= '1') {
+            return "-1";
         }
         return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) - 1);
     }
 
     public static String e(String s) {
-        if (s.charAt(0) == 'h') {
-            System.out.println("Out of range!");
-            System.exit(0);
+        if (s.equals("-1") || s.charAt(0) == 'h') {
+            return "-1";
         }
         return "" + ((char) (s.charAt(0) + 1)) + s.charAt(1);
     }
 
     public static String w(String s) {
-        if (s.charAt(0) == 'a') {
-            System.out.println("Out of range!");
-            System.exit(0);
+        if (s.equals("-1") || s.charAt(0) == 'a') {
+            return "-1";
         }
         return "" + ((char) (s.charAt(0) - 1)) + s.charAt(1);
+    }
+
+    public static String nw(String a) {
+        return n(w(a));
+    }
+
+    public static String ne(String a) {
+        return n(e(a));
+    }
+
+    public static String se(String a) {
+        return s(e(a));
+    }
+
+    public static String sw(String a) {
+        return s(w(a));
+    }
+
+
+    public static String nne(String a) {
+        return n(ne(a));
+    }
+
+    public static String nee(String a) {
+        return ne(e(a));
+    }
+
+    public static String nnw(String a) {
+        return n(nw(a));
+    }
+
+    public static String nww(String a) {
+        return nw(w(a));
+    }
+
+    public static String sse(String a) {
+        return s(se(a));
+    }
+
+    public static String see(String a) {
+        return se(e(a));
+    }
+
+    public static String ssw(String a) {
+        return s(sw(a));
+    }
+
+    public static String sww(String a) {
+        return sw(w(a));
+    }
+
+    public static long n(long a) {
+        return a >>> 8 & fr(-1);
     }
 
     public static long s(long a) {
@@ -239,9 +285,9 @@ public class chessboard {
         return Long.parseUnsignedLong(str.toString(), 2);
     }
 
-    public static ArrayList<String> longToString(Long l) {
+    public static ArrayList<String> longToStrings(Long l) {
         ArrayList<String> res = new ArrayList<>();
-        for (int i = 64; i >= 0; i--) {
+        for (int i = 63; i >= 0; i--) {
             if ((l >>> i & 1) == 1L)
                 res.add(file_and_rank(63 - i));
         }
@@ -270,10 +316,9 @@ public class chessboard {
 
     HashSet<String> legalMoves = new HashSet<>();
     HashSet<String> psuedoLegalMoves = new HashSet<>();
-
     Boolean[] castleRights = new Boolean[4];
     String turn;
-    String enPassant;
+    String enPassant = "";
     String fen;
     int halfMoveClock;
     int fullMoveNumber;
@@ -284,6 +329,10 @@ public class chessboard {
 
     public chessboard(String f) {
         setFromFEN(f);
+    }
+
+    public chessboard(String f, String strs) {
+        setFromFEN(f, strs);
     }
 
     public long pieces(String s) {
@@ -334,13 +383,57 @@ public class chessboard {
             enPassant = last[3];
         halfMoveClock = Integer.parseInt(last[4]);
         fullMoveNumber = Integer.parseInt(last[5]);
-
         allMovesMade.clear();
         fenList.clear();
-        psuedoLegalMoves = updatePsuedoLegalMoves();
-        legalMoves = updateLegalMoves();
         this.fen = f;
         fenList.add(this.fen);
+        psuedoLegalMoves = updatePsuedoLegalMoves();
+        legalMoves = updateLegalMoves();
+    }
+
+    public void setFromFEN(String f, String strs) {
+        pieces = pieces_initializer();
+        pieces.replaceAll((k, v) -> 0L);
+        String[] fen = f.split("/");
+        for (int i = 0; i < 7; i++) {
+            int index = 0;
+            for (char c : fen[i].toCharArray()) {
+                if (c >= '1' && c <= '8')
+                    index += Integer.parseInt("" + c);
+                else {
+                    pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 8 - i));
+                    index++;
+                }
+            }
+        }
+        String[] last = fen[7].split(" ");
+        int index = 0;
+        for (char c : last[0].toCharArray()) {
+            if (c >= '1' && c <= '8')
+                index += Integer.parseInt("" + c);
+            else {
+                pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 1));
+                index++;
+            }
+        }
+        if (last[1].equals("w"))
+            turn = "white";
+        else
+            turn = "black";
+        ArrayList<Character> temp = new ArrayList<>();
+        for (char c : last[2].toCharArray())
+            temp.add(c);
+        castleRights[0] = temp.contains('K');
+        castleRights[1] = temp.contains('Q');
+        castleRights[2] = temp.contains('k');
+        castleRights[3] = temp.contains('q');
+        if (!last[3].equals("-"))
+            enPassant = last[3];
+        halfMoveClock = Integer.parseInt(last[4]);
+        fullMoveNumber = Integer.parseInt(last[5]);
+        allMovesMade.clear();
+        fenList.clear();
+        this.fen = f;
     }
 
     public void clear() {
@@ -392,12 +485,15 @@ public class chessboard {
         return a;
     }
 
-    public HashSet<String> updateLegalMoves() {
-        return new HashSet<String>();
-    }
-
     public HashSet<String> updatePsuedoLegalMoves() {
-        return new HashSet<String>();
+        HashSet<String> res = new HashSet<>();
+        res.addAll(legalPawnMoves(turn.equals("white") ? 'P' : 'p'));
+        res.addAll(legalRookMoves(turn.equals("white") ? 'R' : 'r'));
+        res.addAll(legalKnightMoves(turn.equals("white") ? 'N' : 'n'));
+        res.addAll(legalBishopMoves(turn.equals("white") ? 'B' : 'b'));
+        res.addAll(legalQueenMoves(turn.equals("white") ? 'Q' : 'q'));
+        res.addAll(legalKingMoves(turn.equals("white") ? 'K' : 'k'));
+        return res;
     }
 
     public void reset() {
@@ -620,15 +716,435 @@ public class chessboard {
 
         allMovesMade.add(m); //add move made to allMovesMade
         psuedoLegalMoves = updatePsuedoLegalMoves();
-        legalMoves = updateLegalMoves(); //update list of legal Moves
         fen = fen();
+        legalMoves = updateLegalMoves(); //update list of legal Moves
         fenList.add(fen);
         extraAllMovesMade.clear();
         extraFenList.clear();
     }
 
-    public Long legalKnightMoves(char c) {
-        return nne(pieces(c));
+    public void makeMove(String m, String strs) {
+        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
+        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
+        char to = pieceAt(move[1]); //gets char for captured piece.
+        // If no piece captured or capture is an en passant capture, will be ' '.
+
+        if (to != ' ')
+            pieces.put("" + to, pieces(to) & ~board_builder(move[1])); //if piece at destination square, removes it
+
+        pieces.put("" + from, pieces(from) & ~board_builder(move[0])); //deletes moving piece from origin square
+        pieces.put("" + from, pieces(from) | board_builder(move[1])); //puts moving piece on destination square
+
+        setHalfMoveClock(to, from, move[1]); //sets HalfMoveClock accordingly
+
+        if (turn.equals("black"))
+            fullMoveNumber++; //increment fullMoveNumber
+
+        checkForCastleMove(m); //move rook to proper position if move is castling
+
+        checkForEnPassant(m); //capture pawn for en passant move
+
+        checkForPromotion(m);
+
+        turn = (turn.equals("white")) ? "black" : "white"; //switch turn
+
+        allMovesMade.add(m); //add move made to allMovesMade
+        fen = fen();
     }
 
+    public Long whiteOccupied() {
+        return pieces('P') | pieces('R') | pieces('N') | pieces('B') | pieces('Q') | pieces('K');
+    }
+
+    public Long blackOccupied() {
+        return pieces('p') | pieces('r') | pieces('n') | pieces('b') | pieces('q') | pieces('k');
+    }
+
+    public long occupied() {
+        return whiteOccupied() | blackOccupied();
+    }
+
+    public ArrayList<String> legalKnightMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        long notSameColorOccupied = Character.isUpperCase(c) ? ~whiteOccupied() : ~blackOccupied();
+        for (String str : longToStrings(
+                nne(pieces(c)) & notSameColorOccupied
+        )) {
+            res.add(ssw(str) + str);
+        }
+        for (String str : longToStrings(
+                nee(pieces(c)) & notSameColorOccupied)) {
+            res.add(sww(str) + str);
+        }
+        for (String str : longToStrings(
+                nnw(pieces(c)) & notSameColorOccupied)) {
+            res.add(sse(str) + str);
+        }
+        for (String str : longToStrings(
+                nww(pieces(c)) & notSameColorOccupied)) {
+            res.add(see(str) + str);
+        }
+        for (String str : longToStrings(
+                sse(pieces(c)) & notSameColorOccupied)) {
+            res.add(nnw(str) + str);
+        }
+        for (String str : longToStrings(
+                see(pieces(c)) & notSameColorOccupied)) {
+            res.add(nww(str) + str);
+        }
+        for (String str : longToStrings(
+                ssw(pieces(c)) & notSameColorOccupied)) {
+            res.add(nne(str) + str);
+        }
+        for (String str : longToStrings(
+                sww(pieces(c)) & notSameColorOccupied)) {
+            res.add(nee(str) + str);
+        }
+        return res;
+    }
+
+    public ArrayList<String> legalPawnMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        for (String str : longToStrings(
+                pawnsThatCanDoublePush(c))) {
+            res.add(str + (isWhite(c) ? n(n(str)) : s(s(str))));
+        }
+        for (String str : longToStrings(
+                pawnsThatCanPush(c))) {
+            res.add(str + (isWhite(c) ? n(str) : s(str)));
+        }
+        for (String str : longToStrings(
+                pawnsThatCanCaptureEast(c))) {
+            res.add(str + (isWhite(c) ? n(e(str)) : s(e(str))));
+        }
+        for (String str : longToStrings(
+                pawnsThatCanCaptureWest(c))) {
+            res.add(str + (isWhite(c) ? n(w(str)) : s(w(str))));
+        }
+        return res;
+    }
+
+    public ArrayList<String> legalKingMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        long king = pieces(c);
+        String kong = longToStrings(king).get(0);
+        king |= n(king);
+        king |= s(king);
+        king |= e(king);
+        king |= w(king);
+        king &= isWhite(c) ? ~whiteOccupied() : ~blackOccupied();
+        for (String str : longToStrings(king)) {
+            res.add(kong + str);
+        }
+        res.addAll(legalKingCastleMoves(c));
+        return res;
+    }
+
+    public ArrayList<String> legalKingCastleMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        long moves = 0L;
+        long empty = ~occupied();
+        if (isWhite(c)) {
+            if (castleRights[0]) {
+                moves |= board_builder("g1") & e(empty);
+            }
+            if (castleRights[1]) {
+                moves |= board_builder("c1") & w(empty) & e(empty);
+            }
+        }
+        if (isBlack(c)) {
+            if (castleRights[2]) {
+                moves |= board_builder("g8") & e(empty);
+            }
+            if (castleRights[3]) {
+                moves |= board_builder("c8") & w(empty) & e(empty);
+            }
+        }
+        for (String str : longToStrings(moves)) {
+            res.add((str.charAt(1) == '1' ? "e1" : "e8") + str);
+        }
+        return res;
+    }
+
+    public ArrayList<String> legalBishopMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        for (String str : longToStrings(pieces(c))) {
+            res.addAll(bishopSouthWestMoves(c, str));
+            res.addAll(bishopSouthEastMoves(c, str));
+            res.addAll(bishopNorthWestMoves(c, str));
+            res.addAll(bishopNorthEastMoves(c, str));
+        }
+        return res;
+    }
+
+    public HashSet<String> updateLegalMoves() {
+        HashSet<String> res = new HashSet<>();
+        for (String str : psuedoLegalMoves) {
+            if (!nextBoard(str).kingCanBeCaptured()) {
+                res.add(str);
+            }
+        }
+        turn = turn.equals("white") ? "black" : "white";
+        HashSet<String> temp = updatePsuedoLegalMoves();
+        turn = turn.equals("white") ? "black" : "white";
+        for (String str : temp) {
+            if (res.contains("e1g1") && str.substring(2).equals("g1") ||str.substring(2).equals("f1") ) {
+                res.remove("e1g1");
+            }
+            if (res.contains("e1c1") && str.substring(2).equals("d1") ||str.substring(2).equals("c1") ) {
+                res.remove("e1c1");
+            }
+            if (res.contains("e8g8") && str.substring(2).equals("g8") ||str.substring(2).equals("f8") ) {
+                res.remove("e8g8");
+            }
+            if (res.contains("e8c8") && str.substring(2).equals("d8") ||str.substring(2).equals("c8") ) {
+                res.remove("e8c8");
+            }
+        }
+        return res;
+    }
+
+    public boolean inCheck() {
+        char c = turn.equals("white") ? 'K' : 'k';
+        String king = longToStrings(pieces(c)).get(0);
+        turn = turn.equals("white") ? "black" : "white";
+        HashSet<String> temp = updatePsuedoLegalMoves();
+        turn = turn.equals("white") ? "black" : "white";
+        for (String str : temp) {
+            if (str.substring(2).equals(king)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public chessboard nextBoard(String move) {
+        chessboard temp = new chessboard(fen, "shallow");
+        temp.makeMove(move, "shallow");
+        return temp;
+    }
+
+    public boolean squareWillBeAttacked(String square) {
+        turn = turn.equals("white") ? "black" : "white";
+        HashSet<String> temp = updatePsuedoLegalMoves();
+        turn = turn.equals("white") ? "black" : "white";
+        for (String str : temp) {
+            if (str.substring(2).equals(square)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean kingCanBeCaptured() {
+        char c = turn.equals("white") ? 'k' : 'K';
+        String king = longToStrings(pieces(c)).get(0);
+        HashSet<String> temp = updatePsuedoLegalMoves();
+        for (String str : temp) {
+            if (str.substring(2).equals(king)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ArrayList<String> legalRookMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        for (String str : longToStrings(pieces(c))) {
+            res.addAll(rookNorthMoves(c, str));
+            res.addAll(rookSouthMoves(c, str));
+            res.addAll(rookEastMoves(c, str));
+            res.addAll(rookWestMoves(c, str));
+        }
+        return res;
+    }
+
+    public ArrayList<String> legalQueenMoves(char c) {
+        ArrayList<String> res = new ArrayList<>();
+        res.addAll(legalRookMoves(c));
+        res.addAll(legalBishopMoves(c));
+        return res;
+    }
+
+    public ArrayList<String> bishopNorthEastMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!ne(temp).equals("-1")) && pieceAt(ne(temp)) == ' ') {
+            temp = ne(temp);
+            res.add(str + temp);
+        }
+        if ((!ne(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp)))
+        ) {
+            temp = ne(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> bishopNorthWestMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!nw(temp).equals("-1")) && pieceAt(nw(temp)) == ' ') {
+            temp = nw(temp);
+            res.add(str + temp);
+        }
+        if ((!nw(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp)))
+        ) {
+            temp = nw(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> bishopSouthEastMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!se(temp).equals("-1")) && pieceAt(se(temp)) == ' ') {
+            temp = se(temp);
+            res.add(str + temp);
+        }
+        if ((!se(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp)))
+        ) {
+            temp = se(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> bishopSouthWestMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!sw(temp).equals("-1")) && pieceAt(sw(temp)) == ' ') {
+            temp = sw(temp);
+            res.add(str + temp);
+        }
+        if ((!sw(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp)))
+        ) {
+            temp = sw(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> rookNorthMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!n(temp).equals("-1")) && pieceAt(n(temp)) == ' ') {
+            temp = n(temp);
+            res.add(str + temp);
+        }
+        if ((!n(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp)))
+        ) {
+            temp = n(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> rookSouthMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!s(temp).equals("-1")) && pieceAt(s(temp)) == ' ') {
+            temp = s(temp);
+            res.add(str + temp);
+        }
+        if ((!s(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp)))
+        ) {
+            temp = s(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> rookEastMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!e(temp).equals("-1")) && pieceAt(e(temp)) == ' ') {
+            temp = e(temp);
+            res.add(str + temp);
+        }
+        if ((!e(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp)))
+        ) {
+            temp = e(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public ArrayList<String> rookWestMoves(char c, String str) {
+        ArrayList<String> res = new ArrayList<>();
+        String temp = str;
+        while ((!w(temp).equals("-1")) && pieceAt(w(temp)) == ' ') {
+            temp = w(temp);
+            res.add(str + temp);
+        }
+        if ((!w(temp).equals("-1")) &&
+                isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp)))
+        ) {
+            temp = w(temp);
+            res.add(str + temp);
+        }
+        return res;
+    }
+
+    public boolean isWhite(char c) {
+        return Character.isUpperCase(c);
+    }
+
+    public boolean isBlack(char c) {
+        return Character.isLowerCase(c);
+    }
+
+    public long pawnsThatCanDoublePush(char c) {
+        long empty = ~occupied();
+        if (isWhite(c)) {
+            return pieces(c) & s(empty) & s(s(empty)) & fr(2);
+        }
+        if (isBlack(c)) {
+            return pieces(c) & n(empty) & n(n(empty)) & fr(7);
+        }
+        return 0L;
+    }
+
+    public long pawnsThatCanPush(char c) {
+        long empty = ~occupied();
+        if (isWhite(c)) {
+            return pieces(c) & s(empty);
+        }
+        if (isBlack(c)) {
+            return pieces(c) & n(empty);
+        }
+        return 0L;
+    }
+
+    public long pawnsThatCanCaptureWest(char c) {
+        long empty = ~occupied();
+        long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
+        if (isWhite(c)) {
+            return pieces(c) & se(blackOccupied() | ep);
+        }
+        if (isBlack(c)) {
+            return pieces(c) & ne(whiteOccupied() | ep);
+        }
+        return 0L;
+    }
+
+    public long pawnsThatCanCaptureEast(char c) {
+        long empty = ~occupied();
+        long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
+        if (isWhite(c)) {
+            return pieces(c) & sw(blackOccupied() | ep);
+        }
+        if (isBlack(c)) {
+            return pieces(c) & nw(whiteOccupied() | ep);
+        }
+        return 0L;
+    }
 }
