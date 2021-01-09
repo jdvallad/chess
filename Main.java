@@ -67,32 +67,18 @@ public class Main extends PApplet {
         images[17] = loadImage("./data/images/default_board.png");
         images[18] = loadImage("./data/images/light_square.png");
         images[19] = loadImage("./data/images/dark_square.png");
-        pieceBoard = new char[][]{
-                {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
-                {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
-                {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-                {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-                {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-                {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-                {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
-                {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}
-        };
-    }
-
-    public void keyPressed() {
-        if (key == ESC) {
-            key = 0;
-            reset();
-        }
+        pieceBoard = new char[8][8];
     }
 
     public void initialStartup() {
-        board = new chessboard("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+        board = new chessboard();//"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
         setFromFEN(board.fen);
         drawScreen();
         tempImage = get();
         startupFlag = true;
-        // moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "f8e7", "d2d4", "e8g8", "d4e5"));
+        //chessboard.print(chessboard.longToString(chessboard.board_builder("e")));
+        println(chessboard.e("h4"));
+       // moves = new ArrayList<>(Arrays.asList("e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6", "e1g1", "f8e7", "d2d4", "e8g8", "d4e5"));
     }
 
     public void draw() {
@@ -100,25 +86,33 @@ public class Main extends PApplet {
             initialStartup();
             return;
         }
-        move = playFromList(1000);
-        if (lookingForPickupPiece())
-            drawSelectionHighlight();
+        move = moveInMoveList() ? moveFromList(1000) : getMove();
 
-        if (holdingPiece())
-            drawFloatingPiece(move);
-
-        if (move.length() == 4) {
+        if (moveReady()) {
             board.makeMove(move);
             setFromFEN(board.fen);
             move = "";
         }
     }
 
-    public String playFromList(int a) {
-        if (moves.size() != 0) {
-            delay(a);
-            return moves.remove(0);
-        }
+    public String moveFromList(int a) {
+        delay(a);
+        return moves.remove(0);
+    }
+
+    public boolean moveReady() {
+        return move.length() == 4;
+    }
+
+    public boolean moveInMoveList() {
+        return moves.size() != 0;
+    }
+
+    public String getMove() {
+        if (lookingForPickupPiece())
+            drawSelectionHighlight();
+        if (holdingPiece())
+            drawFloatingPiece(move);
         return move;
     }
 
@@ -126,10 +120,12 @@ public class Main extends PApplet {
         board.clear();
         setFromFEN(board.fen);
     }
-    public void reset(){
+
+    public void reset() {
         board.reset();
         setFromFEN(board.fen);
     }
+
     public void setFromFEN(String f) {
         String[] fen = f.split("/");
         for (int i = 0; i < 7; i++) {
@@ -187,6 +183,22 @@ public class Main extends PApplet {
         return 448 * widthP < ((mouseX)) && ((mouseX)) < 1472 * widthP && 28 * heightP < ((mouseY)) && ((mouseY)) < 1052 * heightP;
     }
 
+    public void keyPressed() {
+        if (key == ESC) {
+            key = 0;
+            reset();
+            return;
+        }
+        if (keyCode == LEFT) {
+            board.rollback();
+            setFromFEN(board.fen);
+        }
+        if (keyCode == RIGHT) {
+            board.rollForward();
+            setFromFEN(board.fen);
+        }
+    }
+
     public void mouseReleased() {
 
         if (move.length() == 2) {
@@ -217,9 +229,8 @@ public class Main extends PApplet {
             char xFile = (char) (97 + x);
             int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
             int yRank = 8 - y;
-            if (getPiece("" + xFile + yRank) != ' ') {
+            if (getPiece("" + xFile + yRank) != ' ')
                 move = "" + xFile + yRank;
-            }
         }
     }
 
@@ -233,25 +244,22 @@ public class Main extends PApplet {
         image(images[14], 448, 1052 - 38);
         drawLastMove();
         for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
+            for (int c = 0; c < 8; c++)
                 drawPiece(r, c);
-            }
         }
         tempImage = get();
     }
 
     public void drawLastMove() {
         String lastMove = board.allMovesMade.size() != 0 ? board.allMovesMade.get(board.allMovesMade.size() - 1) : "";
-        if (lastMove.length() == 0) {
+        if (lastMove.length() == 0)
             return;
-        }
         fill(250, 247, 39, 80);
         strokeWeight(0);
         int a = convertFileToInt(lastMove.charAt(0));
         int b = 8 - Integer.parseInt("" + lastMove.charAt(1));
         int c = convertFileToInt(lastMove.charAt(2));
         int d = 8 - Integer.parseInt("" + lastMove.charAt(3));
-        // print("\r\n" +a+" "+b+" "+" "+c+" "+d);
         rect(447 + 128 * a, 27 + 128 * b, 129, 129);
         rect(447 + 128 * c, 27 + 128 * d, 129, 129);
     }
@@ -340,10 +348,6 @@ public class Main extends PApplet {
         int x = convertFileToInt(s.charAt(0));
         int y = 8 - Integer.parseInt("" + s.charAt(1));
         return pieceBoard[y][x];
-    }
-
-    public char getPiece(int x, int y) {
-        return pieceBoard[x][y];
     }
 
     public void rect(float a, float b, float c, float d) {
