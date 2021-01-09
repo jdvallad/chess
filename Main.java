@@ -10,8 +10,6 @@ public class Main extends PApplet {
     PImage[] images;
     PImage tempImage;
     String move = "";
-    boolean flipped = false;
-    SoundPlayer soundPlayer;
     char[][] pieceBoard;
     boolean startupFlag = false;
     ArrayList<String> moves = new ArrayList<>();
@@ -20,7 +18,9 @@ public class Main extends PApplet {
     SoundFile moveSound;
     SoundFile capture;
     SoundFile error;
+    boolean flipped = false;
     boolean visualFlip = false;
+    Stockfish stock;
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -41,7 +41,6 @@ public class Main extends PApplet {
         fullScreen();
         widthP = (float) displayWidth / 1920f;
         heightP = (float) displayHeight / 1080f;
-        soundPlayer = new SoundPlayer();
         images = new PImage[20];
         start = new SoundFile(this, "./data/sounds/start.mp3");
         moveSound = new SoundFile(this, "./data/sounds/move.mp3");
@@ -73,11 +72,12 @@ public class Main extends PApplet {
 
     public void initialStartup() {
         start.play();
-        board = new chessboard();//"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+        board = new chessboard();//"8/8/3BB2k/8/8/2K5/8/8 w - - 0 1");
         setFromFEN(board.fen);
         drawScreen();
         tempImage = get();
         startupFlag = true;
+        stock = new Stockfish();
     }
 
     public void draw() {
@@ -85,37 +85,46 @@ public class Main extends PApplet {
             initialStartup();
             return;
         }
-       // if (board.turn.equals("black"))
-            //  move = randomMove();
-            move = moveInMoveList() ? moveFromList(1000) : getMove();
-        if (moveReady()) {
-            if (board.legalMoves.contains(move)) {
-                doMove(move);
+        if (!board.gameOver) {
+            if (board.turn.equals("white"))
+                move = getMove(); //stock.ponder(board.fen, 10, 7, 100);
+            if (board.turn.equals("black"))
+                move = stock.ponder(board.fen, 20, 7, 100);
+            if (move.length() == 4) {
+                if (board.legalMoves.contains(move)) {
+                    boolean capture = board.isCapture(move);
+                    board.makeMove(move);
+                    playSound(capture);
+                    setFromFEN(board.fen);
+                    if (board.gameOver)
+                        chessboard.print("\r\n" + board.result);
+                } else {
+                    background(tempImage);
+                    error.play();
+                }
+                move = "";
             }
-            move = "";
         }
     }
 
-    public String randomMove() {
+    public String randomMove(int a) {
         ArrayList<String> temp = new ArrayList<>();
         temp.addAll(board.legalMoves);
         Collections.shuffle(temp);
         if (temp.size() != 0) {
+            delay(a);
             return temp.get(0);
         }
         return move;
     }
 
-    public void doMove(String moveString) {
-        boolean b = board.isCapture(move);
-        board.makeMove(move);
+    public void playSound(boolean b) {
         if (board.legalMoves.size() == 0)
             start.play();
         else if (b)
             capture.play();
         else
             moveSound.play();
-        setFromFEN(board.fen);
     }
 
     public String moveFromList(int a) {
@@ -145,6 +154,7 @@ public class Main extends PApplet {
     }
 
     public void reset() {
+        start.play();
         board.reset();
         setFromFEN(board.fen);
     }
@@ -316,8 +326,8 @@ public class Main extends PApplet {
             c = 7 - c;
             d = 7 - d;
         }
-        rect(447 + 128 * a, 27 + 128 * b, 129, 129);
-        rect(447 + 128 * c, 27 + 128 * d, 129, 129);
+        rect(447 + 128 * a, 27 + 128 * b, 128, 128);
+        rect(447 + 128 * c, 27 + 128 * d, 128, 128);
     }
 
     public int convertFileToInt(char c) {

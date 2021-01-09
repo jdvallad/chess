@@ -38,7 +38,7 @@ public class StockfishClient {
             engines.add(new Stockfish(path, variant, options.toArray(new Option[0])));
     }
     public String submit(Query query) {
-        Stockfish engine = engines.remove();
+        Stockfish engine = engines.peek();
         return switch (query.getType()) {
             case Best_Move -> engine.getBestMove(query);
             case Make_Move -> engine.makeMove(query);

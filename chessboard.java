@@ -322,6 +322,8 @@ public class chessboard {
     String fen;
     int halfMoveClock;
     int fullMoveNumber;
+    boolean gameOver = false;
+    String result = "";
 
     public chessboard() {
         setFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -389,6 +391,58 @@ public class chessboard {
         fenList.add(this.fen);
         psuedoLegalMoves = updatePsuedoLegalMoves();
         legalMoves = updateLegalMoves();
+        gameOver = false;
+        checkForGameOver();
+    }
+
+    public void checkForGameOver() {
+        if (legalMoves.size() == 0) {
+            gameOver = true;
+            if (inCheck()) {
+                result = (turn.equals("white")) ? "black wins!" : "white wins!";
+            } else {
+                gameOver = true;
+                result = "draw by statemate!";
+            }
+            return;
+        }
+        if (halfMoveClock == 50) {
+            gameOver = true;
+            result = "draw by 50 move rule!";
+            legalMoves.clear();
+            return;
+        }
+        int occurrences = Collections.frequency(shortenedFenList(), shortenedFen(fen));
+        if (occurrences >= 5) {
+            gameOver = true;
+            result = "draw by 5-fold repetition!";
+            legalMoves.clear();
+            return;
+        }
+    }
+
+    public chessboard(chessboard tempBoard) {
+        this(tempBoard.fen());
+        tempBoard.fenList = new ArrayList<>(fenList);
+        tempBoard.allMovesMade = new ArrayList<>(allMovesMade);
+        tempBoard.gameOver = gameOver;
+    }
+    public chessboard nextBoardAfterMove(String move){
+        chessboard temp = new chessboard(this);
+        temp.makeMove(move);
+        return temp;
+    }
+    public ArrayList<String> shortenedFenList() {
+        ArrayList<String> temp = new ArrayList<>();
+        for (String s : fenList) {
+            temp.add(shortenedFen(s));
+        }
+        return temp;
+    }
+
+    public String shortenedFen(String s) {
+        String[] str = s.split(" ");
+        return str[0] + " " + str[1] + " " + str[2] + " " + str[3];
     }
 
     public void setFromFEN(String f, String strs) {
@@ -721,6 +775,7 @@ public class chessboard {
         fenList.add(fen);
         extraAllMovesMade.clear();
         extraFenList.clear();
+        checkForGameOver();
     }
 
     public void makeMove(String m, String strs) {
