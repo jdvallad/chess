@@ -1,23 +1,29 @@
 import processing.core.*;
 import processing.sound.*;
+
 import java.util.*;
 
 public class Main extends PApplet {
-    float widthP;
-    float heightP;
+
+    float widthP, heightP; //used to resize window on different resolutions
     PImage[] images;
     PImage tempImage;
     String move = "";
-    char[][] pieceBoard;
-    boolean firstDraw = true;
-    chessboard board;
+    char[][] pieceBoard = new char[8][8];
+    boolean firstDraw = true; //used to run code once on first pass of draw
+    chessboard board = new chessboard(); //handles logic of chessboard
     SoundFile start;
+    SoundFile end;
     SoundFile moveSound;
     SoundFile capture;
     SoundFile error;
     boolean flipped = false; //changes the orientation of the board
     boolean visualFlip = false; //determines whether flipped will be changed when a move is made
-    Stockfish stock;
+    Stockfish fish = new Stockfish(); //used to get moves from stockfish
+    boolean threadRunning = false;
+    dogThread dog;
+    stockThread stock;
+    String data = "lichess";
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -38,35 +44,31 @@ public class Main extends PApplet {
         fullScreen();
         widthP = (float) displayWidth / 1920f;
         heightP = (float) displayHeight / 1080f;
-        images = new PImage[20];
-        start = new SoundFile(this, "./data/sounds/start.mp3");
-        moveSound = new SoundFile(this, "./data/sounds/move.mp3");
-        capture = new SoundFile(this, "./data/sounds/capture.mp3");
-        error = new SoundFile(this, "./data/sounds/error.mp3");
-        String imageString = "lichess/";
-        images[0] = loadImage("./data/images/" + imageString + "wK.png");
-        images[1] = loadImage("./data/images/" + imageString + "bK.png");
-        images[2] = loadImage("./data/images/" + imageString + "wQ.png");
-        images[3] = loadImage("./data/images/" + imageString + "bQ.png");
-        images[4] = loadImage("./data/images/" + imageString + "wR.png");
-        images[5] = loadImage("./data/images/" + imageString + "bR.png");
-        images[6] = loadImage("./data/images/" + imageString + "wB.png");
-        images[7] = loadImage("./data/images/" + imageString + "bB.png");
-        images[8] = loadImage("./data/images/" + imageString + "wN.png");
-        images[9] = loadImage("./data/images/" + imageString + "bN.png");
-        images[10] = loadImage("./data/images/" + imageString + "wP.png");
-        images[11] = loadImage("./data/images/" + imageString + "bP.png");
-        images[12] = loadImage("./data/images/" + imageString + "board.png");
-        images[13] = loadImage("./data/images/" + imageString + "filler.png");//rank_top.png");
-        images[14] = loadImage("./data/images/" + imageString + "filler.png");//"rank_bottom.png");
-        images[15] = loadImage("./data/images/" + imageString + "filler.png");//"file_left.png");
-        images[16] = loadImage("./data/images/" + imageString + "filler.png");//"file_right.png");
-        images[17] = loadImage("./data/images/" + imageString + "filler.png");//"default_board.png");
-        images[18] = loadImage("./data/images/" + imageString + "light_square.png");
-        images[19] = loadImage("./data/images/" + imageString + "dark_square.png");
-        pieceBoard = new char[8][8];
-        stock = new Stockfish();
-        board = new chessboard();//"8/8/3BB2k/8/8/2K5/8/8 w - - 0 1");
+        images = new PImage[19];
+        start = new SoundFile(this, "./data/" + data + "/sounds/start.mp3");
+        end = new SoundFile(this, "./data/" + data + "/sounds/end.mp3");
+        moveSound = new SoundFile(this, "./data/" + data + "/sounds/move.mp3");
+        capture = new SoundFile(this, "./data/" + data + "/sounds/capture.mp3");
+        error = new SoundFile(this, "./data/" + data + "/sounds/error.mp3");
+        images[0] = loadImage("./data/" + data + "/images/wK.png");
+        images[1] = loadImage("./data/" + data + "/images/bK.png");
+        images[2] = loadImage("./data/" + data + "/images/wQ.png");
+        images[3] = loadImage("./data/" + data + "/images/bQ.png");
+        images[4] = loadImage("./data/" + data + "/images/wR.png");
+        images[5] = loadImage("./data/" + data + "/images/bR.png");
+        images[6] = loadImage("./data/" + data + "/images/wB.png");
+        images[7] = loadImage("./data/" + data + "/images/bB.png");
+        images[8] = loadImage("./data/" + data + "/images/wN.png");
+        images[9] = loadImage("./data/" + data + "/images/bN.png");
+        images[10] = loadImage("./data/" + data + "/images/wP.png");
+        images[11] = loadImage("./data/" + data + "/images/bP.png");
+        images[12] = loadImage("./data/" + data + "/images/board.png");
+        images[13] = loadImage("./data/" + data + "/images/rank_top.png");
+        images[14] = loadImage("./data/" + data + "/images/rank_bottom.png");
+        images[15] = loadImage("./data/" + data + "/images/file_left.png");
+        images[16] = loadImage("./data/" + data + "/images/file_right.png");
+        images[17] = loadImage("./data/" + data + "/images/light_square.png");
+        images[18] = loadImage("./data/" + data + "/images/dark_square.png");
     }
 
     public void draw() {
@@ -74,6 +76,7 @@ public class Main extends PApplet {
             start.play();
             setFromFEN(board.fen);
             tempImage = get();
+            //chessboard.println(Evaluation.evaluate(board));
             firstDraw = false;
             return;
         }
@@ -83,13 +86,14 @@ public class Main extends PApplet {
                 if (board.legalMoves.contains(move)) { // ensures move is a legal move
                     boolean capture = board.isCapture(move); //used to play correct sound with move
                     board.makeMove(move); //make the move on the logical board
+                    threadRunning = false;
                     playSound(capture); //play the correct sound
                     setFromFEN(board.fen); //update GUI board from logical board fen.
+                    //  chessboard.println(Evaluation.evaluate(board));
                     if (board.gameOver) {// move made ends the game
                         chessboard.print("\r\n" + board.result); //show game results (want to move out of console)
-                        fill(30, 80);
-                        rect(0, 0, 1920, 1080);
-                        tempImage = get();
+                        tintScreen(); //darkens the screen to show game over.
+                        tempImage = get(); //updates tempImage
                     }
                     move = ""; //reset move
                     return;
@@ -100,6 +104,15 @@ public class Main extends PApplet {
                 move = ""; //reset move
             }
         }
+    }
+
+    /**
+     * darkens the screen.
+     * Used to show game over.
+     */
+    public void tintScreen() {
+        fill(30, 80);
+        rect(0, 0, 1920, 1080);
     }
 
     public String randomMove(int a) {
@@ -114,7 +127,7 @@ public class Main extends PApplet {
 
     public void playSound(boolean b) {
         if (board.legalMoves.size() == 0)
-            start.play();
+            end.play();
         else if (b)
             capture.play();
         else
@@ -130,11 +143,35 @@ public class Main extends PApplet {
 
         if (board.turn.equals("white"))
             return move;
-
         if (board.turn.equals("black"))
-            return stock.ponder(board.fen, 20, 7, 100);
-
+            return stockMove(7, 20);
         return "";
+    }
+
+    public String dogMove(int depth) {
+        if (!threadRunning) {
+            dog = new dogThread(board, depth);
+            dog.start();
+            threadRunning = true;
+        }
+        String[] res = dog.move();
+        if (!res[0].equals(""))
+            return res[0];
+        else
+            return new String[]{move, "", ""}[0];
+    }
+
+    public String stockMove(int depth, int diff) {
+        if (!threadRunning) {
+            stock = new stockThread(board, fish, depth, diff);
+            stock.start();
+            threadRunning = true;
+        }
+        String res = stock.move();
+        if (!res.equals(""))
+            return res;
+        else
+            return move;
     }
 
     public void clear() {
@@ -223,12 +260,18 @@ public class Main extends PApplet {
             reset();
             return;
         }
+        if (key == ' ') {
+            flipped = !flipped;
+            drawScreen();
+            tempImage = get();
+            return;
+        }
         if (keyCode == LEFT) {
-            board.rollback();
+            board.rollback(2);
             setFromFEN(board.fen);
         }
         if (keyCode == RIGHT) {
-            board.rollForward();
+            board.rollForward(2);
             setFromFEN(board.fen);
         }
     }
@@ -377,7 +420,7 @@ public class Main extends PApplet {
             team = 1;
         }
         background(tempImage);
-        image(images[(r + c) % 2 == 0 ? 18 : 19], 448 + 128 * c, 28 + 128 * r, 128, 128);
+        image(images[(r + c) % 2 == 0 ? 17 : 18], 448 + 128 * c, 28 + 128 * r, 128, 128);
         if ((!lastMove.equals("")) && (location.equals(lastMove.substring(0, 2)) || location.equals(lastMove.substring(2)))) {
             fill(250, 247, 39, 30);
             strokeWeight(0);
@@ -423,6 +466,9 @@ public class Main extends PApplet {
         return pieceBoard[y][x];
     }
 
+    /*
+    Override methods to ensure that board is properly rendered on other resolutions.
+     */
     public void rect(float a, float b, float c, float d) {
         super.rect(widthP * a, heightP * b, widthP * c, heightP * d);
     }

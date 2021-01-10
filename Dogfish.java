@@ -1,88 +1,108 @@
 import java.util.*;
 
 public class Dogfish {
-/**
- public static double minimax(Board b, int depth,double alpha, double beta, boolean maximizingPlayer) {
- double res=b.evaluate();
- if (depth==0||b.noMoves()||b.movesSinceLastCapture>=30) {
- return res;
- }
- if (maximizingPlayer) {
- double maxEval=-5000.;
- ArrayList<Board> moves = b.getChildrenBoards();
- for (Board temp : moves) {
- double eval= minimax(temp, depth-1,alpha,beta, false);
- maxEval=Math.max(maxEval, eval);
- alpha=Math.max(alpha,eval);
- if(alpha>=beta){
- break;
- }
- }
- return maxEval;
- }
- else
- {
- double minEval=5000.;
- ArrayList<Board> moves = b.getChildrenBoards();
- for (Board temp : moves) {
- double eval= minimax(temp,depth-1,alpha,beta, true);
- minEval=Math.min(minEval, eval);
- beta=Math.min(beta,eval);
- if(beta<=alpha){
- break;
- }
- }
- return minEval;
- }
- }
+    public static float[] minimax(chessboard board, int depth, float alpha, float beta, boolean maximizingPlayer) {
+       // chessboard.println(depth);
+        float[] result = new float[2];
+        result[1] = depth;
+        float res = Evaluation.evaluate(board);
+        if (depth == -1 || depth == 0 || board.legalMoves.size() == 0) {
+            result[0] = res;
+            result[1] = 0;
+            return result;
+        }
+        if (maximizingPlayer) {
+            float maxEval = -5000;
+            ArrayList<chessboard> moves = new ArrayList<>();
+            for (String str : board.legalMoves)
+                moves.add(board.nextBoard(str));
+            for (chessboard temp : moves) {
+                float eval = minimax(temp, depth - 1, alpha, beta, false)[0];
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if (alpha >= beta) {
+                    break;
+                }
+            }
+            result[0] = maxEval;
+            return result;
+        } else {
+            float minEval = 5000;
+            ArrayList<chessboard> moves = new ArrayList<chessboard>();
+            for (String str : board.legalMoves)
+                moves.add(board.nextBoard(str));
+            for (chessboard temp : moves) {
+                float eval = minimax(temp, depth - 1, alpha, beta, true)[0];
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            result[0] = minEval;
+            return result;
+        }
+    }
 
- public static int[] ponder(Board b, int depth, double alpha,double beta) {
- HashSet<String> tempo= b.legalMoves;
- ArrayList<int[]> moves = new ArrayList<>();
- for(String s:tempo){
- moves.add(b.getMove(s));
- }
- if(moves.size()==0){
- return new int[]{-1,0,0,0};
- }
- if(depth==0||depth==-1){
- Collections.shuffle(moves);
- return moves.get(0);
- }
- if (b.turn) {
- double maxEval=-5000;
- int index=0;
- for (int i=0; i<moves.size(); i++) {
- int[] temp1 = moves.get(i);
- double eval= minimax(b.nextBoard(temp1), depth-1,alpha, beta,false);
- if (eval>=maxEval) {
- maxEval=eval;
- index=i;
- }
- alpha=Math.max(alpha,eval);
- if(alpha>=beta){
- break;
- }
- }
- return moves.get(index);
- }
- else {
- double minEval=5000;
- int index=0;
- for (int i=0; i<moves.size(); i++) {
- int[] temp1 = moves.get(i);
- double eval= minimax(b.nextBoard(temp1),depth-1,alpha,beta, true);
- if (eval<=minEval) {
- minEval=eval;
- index=i;
- }
- beta=Math.min(beta,eval);
- if(beta<=alpha){
- break;
- }
- }
- return moves.get(index);
- }
- }
- */
+    public static String[] ponder(chessboard board, int dw, float alpha, float beta) {
+        int depth = dw + 1;
+        ArrayList<String> moves = new ArrayList<>(board.legalMoves);
+        String[] result = new String[3];
+        if (moves.size() == 0) {
+            result[0] = "game";
+            result[1] = "is";
+            result[2] = "over!";
+            return result;
+        }
+        if (depth == 1) {
+            Collections.shuffle(moves);
+            result[0] = moves.get(0);
+            result[1] = "" + Evaluation.evaluate(board.nextBoard(result[0]));
+            result[2] = "0";
+            return result;
+        }
+        if (board.turn.equals("white")) {
+            float maxEval = -5000;
+            int index = 0;
+            float cDepth = 0;
+            for (int i = 0; i < moves.size(); i++) {
+                String temp1 = moves.get(i);
+                float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, false);
+                if (eval[0] >= maxEval) {
+                    maxEval = eval[0];
+                    index = i;
+                    cDepth = eval[1];
+                }
+                alpha = Math.max(alpha, eval[0]);
+                if (alpha >= beta) {
+                    break;
+                }
+            }
+            result[0] = moves.get(index);
+            result[1] = "" + maxEval;
+            result[2] = "" + cDepth;
+            return result;
+        } else {
+            float minEval = 5000;
+            int index = 0;
+            float cDepth = 0;
+            for (int i = 0; i < moves.size(); i++) {
+                String temp1 = moves.get(i);
+                float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, true);
+                if (eval[0] <= minEval) {
+                    minEval = eval[0];
+                    index = i;
+                    cDepth = eval[1];
+                }
+                beta = Math.min(beta, eval[0]);
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            result[0] = moves.get(index);
+            result[1] = "" + minEval;
+            result[2] = "" + cDepth;
+            return result;
+        }
+    }
 }
