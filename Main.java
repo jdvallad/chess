@@ -23,7 +23,7 @@ public class Main extends PApplet {
     boolean threadRunning = false;
     dogThread dog;
     stockThread stock;
-    String data = "lichess";
+    String data = "default";
 
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {
@@ -89,7 +89,8 @@ public class Main extends PApplet {
                     threadRunning = false;
                     playSound(capture); //play the correct sound
                     setFromFEN(board.fen); //update GUI board from logical board fen.
-                    //  chessboard.println(Evaluation.evaluate(board));
+                     chessboard.println(Evaluation.evaluate(board));
+                     chessboard.println(Evaluation.endGame(board));
                     if (board.gameOver) {// move made ends the game
                         chessboard.print("\r\n" + board.result); //show game results (want to move out of console)
                         tintScreen(); //darkens the screen to show game over.
@@ -144,7 +145,7 @@ public class Main extends PApplet {
         if (board.turn.equals("white"))
             return move;
         if (board.turn.equals("black"))
-            return stockMove(7, 20);
+            return dogMove(1);
         return "";
     }
 
@@ -155,9 +156,10 @@ public class Main extends PApplet {
             threadRunning = true;
         }
         String[] res = dog.move();
-        if (!res[0].equals(""))
+        if (!res[0].equals("")) {
+            print(res);
             return res[0];
-        else
+        } else
             return new String[]{move, "", ""}[0];
     }
 

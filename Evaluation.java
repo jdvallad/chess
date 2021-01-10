@@ -9,10 +9,10 @@ public class Evaluation {
             {0, 0, 0, 0, 0, 0, 0, 0,},
             {50, 50, 50, 50, 50, 50, 50, 50,},
             {10, 10, 20, 30, 30, 20, 10, 10,},
-            {5, 5, 10, 25, 25, 10, 5, 5,},
-            {0, 0, 0, 20, 20, 0, 0, 0,},
-            {5, -5, -10, 0, 0, -10, -5, 5,},
-            {5, 10, 10, -20, -20, 10, 10, 5,},
+            {5, 5, 10, 27, 27, 10, 5, 5,},
+            {0, 0, 0, 25, 25, 0, 0, 0,},
+            {5, -5, -10, 5, 5, -10, -5, 5,},
+            {5, 10, 10, -40, -40, 10, 10, 5,},
             {0, 0, 0, 0, 0, 0, 0, 0,}};
     static final float[][] NT = new float[][]{
             {-50, -40, -30, -30, -30, -30, -40, -50,},
@@ -73,7 +73,9 @@ public class Evaluation {
     public static boolean endGame(chessboard board) {
         boolean whiteQueen = chessboard.longToStrings(board.pieces("Q")).size() == 1;
         boolean blackQueen = chessboard.longToStrings(board.pieces("q")).size() == 1;
-        if (!(whiteQueen || blackQueen))
+        int pawnCount = chessboard.longToStrings(board.pieces("p")).size()
+                + chessboard.longToStrings(board.pieces("P")).size();
+        if ((!(whiteQueen || blackQueen)) && pawnCount <=8)
             return true;
         if (whiteQueen) {
             int minorPieceCount = chessboard.longToStrings(board.pieces("B")).size()
