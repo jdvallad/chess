@@ -1,7 +1,5 @@
 import processing.core.*;
 import processing.sound.*;
-
-import java.lang.reflect.Array;
 import java.util.*;
 
 public class Main extends PApplet {
@@ -11,15 +9,14 @@ public class Main extends PApplet {
     PImage tempImage;
     String move = "";
     char[][] pieceBoard;
-    boolean startupFlag = false;
-    ArrayList<String> moves = new ArrayList<>();
+    boolean firstDraw = true;
     chessboard board;
     SoundFile start;
     SoundFile moveSound;
     SoundFile capture;
     SoundFile error;
-    boolean flipped = false;
-    boolean visualFlip = false;
+    boolean flipped = false; //changes the orientation of the board
+    boolean visualFlip = false; //determines whether flipped will be changed when a move is made
     Stockfish stock;
 
     static public void main(String[] passedArgs) {
@@ -68,48 +65,45 @@ public class Main extends PApplet {
         images[18] = loadImage("./data/images/" + imageString + "light_square.png");
         images[19] = loadImage("./data/images/" + imageString + "dark_square.png");
         pieceBoard = new char[8][8];
-    }
-
-    public void initialStartup() {
-        start.play();
-        board = new chessboard();//"8/8/3BB2k/8/8/2K5/8/8 w - - 0 1");
-        setFromFEN(board.fen);
-        drawScreen();
-        tempImage = get();
-        startupFlag = true;
         stock = new Stockfish();
+        board = new chessboard();//"8/8/3BB2k/8/8/2K5/8/8 w - - 0 1");
     }
 
     public void draw() {
-        if (!startupFlag) {
-            initialStartup();
+        if (firstDraw) {
+            start.play();
+            setFromFEN(board.fen);
+            tempImage = get();
+            firstDraw = false;
             return;
         }
-        if (!board.gameOver) {
-            if (board.turn.equals("white"))
-                move = getMove(); //stock.ponder(board.fen, 10, 7, 100);
-            if (board.turn.equals("black"))
-                move = stock.ponder(board.fen, 20, 7, 100);
-            if (move.length() == 4) {
-                if (board.legalMoves.contains(move)) {
-                    boolean capture = board.isCapture(move);
-                    board.makeMove(move);
-                    playSound(capture);
-                    setFromFEN(board.fen);
-                    if (board.gameOver)
-                        chessboard.print("\r\n" + board.result);
-                } else {
-                    background(tempImage);
-                    error.play();
+        if (!board.gameOver) { // game is still running
+            move = getMove(); // move is created, either from user input or from bot
+            if (move.length() == 4) { // ensures move is complete. (When user is holding piece, move is of form 'e2'
+                if (board.legalMoves.contains(move)) { // ensures move is a legal move
+                    boolean capture = board.isCapture(move); //used to play correct sound with move
+                    board.makeMove(move); //make the move on the logical board
+                    playSound(capture); //play the correct sound
+                    setFromFEN(board.fen); //update GUI board from logical board fen.
+                    if (board.gameOver) {// move made ends the game
+                        chessboard.print("\r\n" + board.result); //show game results (want to move out of console)
+                        fill(30, 80);
+                        rect(0, 0, 1920, 1080);
+                        tempImage = get();
+                    }
+                    move = ""; //reset move
+                    return;
                 }
-                move = "";
+                //This is only reached if move attempted wasn't a legal move
+                background(tempImage); //This ensures piece being held snaps back to position
+                error.play(); //play illegal move sound
+                move = ""; //reset move
             }
         }
     }
 
     public String randomMove(int a) {
-        ArrayList<String> temp = new ArrayList<>();
-        temp.addAll(board.legalMoves);
+        ArrayList<String> temp = new ArrayList<>(board.legalMoves);
         Collections.shuffle(temp);
         if (temp.size() != 0) {
             delay(a);
@@ -127,25 +121,20 @@ public class Main extends PApplet {
             moveSound.play();
     }
 
-    public String moveFromList(int a) {
-        delay(a);
-        return moves.remove(0);
-    }
-
-    public boolean moveReady() {
-        return move.length() == 4;
-    }
-
-    public boolean moveInMoveList() {
-        return moves.size() != 0;
-    }
-
     public String getMove() {
-        if (lookingForPickupPiece())
+        if (lookingForPickupPiece()) //This will show legal moves for piece currently hovered over
             drawSelectionHighlight();
+
         if (holdingPiece())
-            drawFloatingPiece(move);
-        return move;
+            drawFloatingPiece(move); //This will show legal moves for held piece as well as render it as floating
+
+        if (board.turn.equals("white"))
+            return move;
+
+        if (board.turn.equals("black"))
+            return stock.ponder(board.fen, 20, 7, 100);
+
+        return "";
     }
 
     public void clear() {
@@ -395,8 +384,6 @@ public class Main extends PApplet {
             rect(447 + 128 * c, 27 + 128 * r, 129, 129);
         }
 
-        int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
-        int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
         showLegalMoves(location);
         image(images[temp + (team == 0 ? 0 : 1)], mouseX - 64, mouseY - 64, 128, 128);
     }

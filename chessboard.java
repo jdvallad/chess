@@ -383,6 +383,8 @@ public class chessboard {
         castleRights[3] = temp.contains('q');
         if (!last[3].equals("-"))
             enPassant = last[3];
+        else
+            enPassant = "";
         halfMoveClock = Integer.parseInt(last[4]);
         fullMoveNumber = Integer.parseInt(last[5]);
         allMovesMade.clear();
@@ -734,7 +736,7 @@ public class chessboard {
         }
     }
 
-    public void setHalfMoveClock(char to, char from, String move) {
+    public void setHalfMoveClock(char to, char from) {
         if (to != ' ')
             halfMoveClock = 0; //reset clock due to capture
         else if ((from == 'p') || (from == 'P'))
@@ -755,7 +757,7 @@ public class chessboard {
         pieces.put("" + from, pieces(from) & ~board_builder(move[0])); //deletes moving piece from origin square
         pieces.put("" + from, pieces(from) | board_builder(move[1])); //puts moving piece on destination square
 
-        setHalfMoveClock(to, from, move[1]); //sets HalfMoveClock accordingly
+        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
 
         if (turn.equals("black"))
             fullMoveNumber++; //increment fullMoveNumber
@@ -790,7 +792,7 @@ public class chessboard {
         pieces.put("" + from, pieces(from) & ~board_builder(move[0])); //deletes moving piece from origin square
         pieces.put("" + from, pieces(from) | board_builder(move[1])); //puts moving piece on destination square
 
-        setHalfMoveClock(to, from, move[1]); //sets HalfMoveClock accordingly
+        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
 
         if (turn.equals("black"))
             fullMoveNumber++; //increment fullMoveNumber
@@ -1180,7 +1182,6 @@ public class chessboard {
     }
 
     public long pawnsThatCanCaptureWest(char c) {
-        long empty = ~occupied();
         long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
         if (isWhite(c)) {
             return pieces(c) & se(blackOccupied() | ep);
@@ -1192,7 +1193,6 @@ public class chessboard {
     }
 
     public long pawnsThatCanCaptureEast(char c) {
-        long empty = ~occupied();
         long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
         if (isWhite(c)) {
             return pieces(c) & sw(blackOccupied() | ep);
