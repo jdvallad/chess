@@ -70,26 +70,26 @@ public class Evaluation {
             {-50, -30, -30, -30, -30, -30, -30, -50,}
     };
 
-    public static boolean endGame(chessboard board) {
-        boolean whiteQueen = chessboard.longToStrings(board.pieces("Q")).size() == 1;
-        boolean blackQueen = chessboard.longToStrings(board.pieces("q")).size() == 1;
-        int pawnCount = chessboard.longToStrings(board.pieces("p")).size()
-                + chessboard.longToStrings(board.pieces("P")).size();
+    public static boolean endGame(chess board) {
+        boolean whiteQueen = chess.longToStrings(board.pieces("Q")).size() == 1;
+        boolean blackQueen = chess.longToStrings(board.pieces("q")).size() == 1;
+        int pawnCount = chess.longToStrings(board.pieces("p")).size()
+                + chess.longToStrings(board.pieces("P")).size();
         if ((!(whiteQueen || blackQueen)) && pawnCount <=8)
             return true;
         if (whiteQueen) {
-            int minorPieceCount = chessboard.longToStrings(board.pieces("B")).size()
-                    + chessboard.longToStrings(board.pieces("N")).size();
-            int rookCount = chessboard.longToStrings(board.pieces("R")).size();
+            int minorPieceCount = chess.longToStrings(board.pieces("B")).size()
+                    + chess.longToStrings(board.pieces("N")).size();
+            int rookCount = chess.longToStrings(board.pieces("R")).size();
             if (rookCount != 0)
                 return false;
             if (minorPieceCount > 1)
                 return false;
         }
         if (blackQueen) {
-            int minorPieceCount = chessboard.longToStrings(board.pieces("b")).size()
-                    + chessboard.longToStrings(board.pieces("n")).size();
-            int rookCount = chessboard.longToStrings(board.pieces("r")).size();
+            int minorPieceCount = chess.longToStrings(board.pieces("b")).size()
+                    + chess.longToStrings(board.pieces("n")).size();
+            int rookCount = chess.longToStrings(board.pieces("r")).size();
             if (rookCount != 0)
                 return false;
             return minorPieceCount <= 1;
@@ -97,7 +97,7 @@ public class Evaluation {
         return true;
     }
 
-    public static float evaluate(chessboard board) {
+    public static float evaluate(chess board) {
         char[][] pieces = fillBoard(board);
         float res = 0;
         boolean endGame = endGame(board);
@@ -138,7 +138,7 @@ public class Evaluation {
         return res;
     }
 
-    public static char[][] fillBoard(chessboard board) {
+    public static char[][] fillBoard(chess board) {
         char[][] res = new char[8][8];
         for (char ch : new char[]{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}) {
             for (int i : new int[]{1, 2, 3, 4, 5, 6, 7, 8}) {

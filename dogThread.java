@@ -1,8 +1,8 @@
 public class dogThread extends Thread {
-    chessboard board;
+    chess board;
     private String[] move = new String[3];
     private final int depth;
-    public dogThread(chessboard b,int d) {
+    public dogThread(chess b,int d) {
         board = b;
         depth = d;
         move[0] = "";

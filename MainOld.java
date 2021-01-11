@@ -1,13 +1,11 @@
-import processing.core.PApplet;
-import processing.core.PImage;
-import processing.sound.SoundFile;
+import processing.core.*;
+import processing.sound.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 
-public class chessboard {
-    float widthP, heightP;
-    PApplet screen;
+public class MainOld extends PApplet {
+
+    float widthP, heightP; //used to resize window on different resolutions
     PImage[] images;
     PImage tempImage;
     String move = "";
@@ -27,45 +25,57 @@ public class chessboard {
     stockThread stock;
     String data = "default";
 
-    public chessboard(PApplet p) {
-        screen = p;
+    static public void main(String[] passedArgs) {
+        com.sun.javafx.application.PlatformImpl.startup(() -> {
+        });
+        try {
+            String[] appletArgs = new String[]{"--present", "--window-color=#666666", "--stop-color=#cccccc", "Main"};
+            if (passedArgs != null) {
+                PApplet.main(concat(appletArgs, passedArgs));
+            } else {
+                PApplet.main(appletArgs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void settings() {
-        screen.fullScreen();
-        widthP = (float) screen.displayWidth / 1920f;
-        heightP = (float) screen.displayHeight / 1080f;
+        fullScreen();
+        widthP = (float) displayWidth / 1920f;
+        heightP = (float) displayHeight / 1080f;
         images = new PImage[19];
-        start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
-        end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
-        moveSound = new SoundFile(screen, "./data/" + data + "/sounds/move.mp3");
-        capture = new SoundFile(screen, "./data/" + data + "/sounds/capture.mp3");
-        error = new SoundFile(screen, "./data/" + data + "/sounds/error.mp3");
-        images[0] = screen.loadImage("./data/" + data + "/images/wK.png");
-        images[1] = screen.loadImage("./data/" + data + "/images/bK.png");
-        images[2] = screen.loadImage("./data/" + data + "/images/wQ.png");
-        images[3] = screen.loadImage("./data/" + data + "/images/bQ.png");
-        images[4] = screen.loadImage("./data/" + data + "/images/wR.png");
-        images[5] = screen.loadImage("./data/" + data + "/images/bR.png");
-        images[6] = screen.loadImage("./data/" + data + "/images/wB.png");
-        images[7] = screen.loadImage("./data/" + data + "/images/bB.png");
-        images[8] = screen.loadImage("./data/" + data + "/images/wN.png");
-        images[9] = screen.loadImage("./data/" + data + "/images/bN.png");
-        images[10] = screen.loadImage("./data/" + data + "/images/wP.png");
-        images[11] = screen.loadImage("./data/" + data + "/images/bP.png");
-        images[12] = screen.loadImage("./data/" + data + "/images/board.png");
-        images[13] = screen.loadImage("./data/" + data + "/images/rank_top.png");
-        images[14] = screen.loadImage("./data/" + data + "/images/rank_bottom.png");
-        images[15] = screen.loadImage("./data/" + data + "/images/file_left.png");
-        images[16] = screen.loadImage("./data/" + data + "/images/file_right.png");
-        images[17] = screen.loadImage("./data/" + data + "/images/light_square.png");
-        images[18] = screen.loadImage("./data/" + data + "/images/dark_square.png");
+        start = new SoundFile(this, "./data/" + data + "/sounds/start.mp3");
+        end = new SoundFile(this, "./data/" + data + "/sounds/end.mp3");
+        moveSound = new SoundFile(this, "./data/" + data + "/sounds/move.mp3");
+        capture = new SoundFile(this, "./data/" + data + "/sounds/capture.mp3");
+        error = new SoundFile(this, "./data/" + data + "/sounds/error.mp3");
+        images[0] = loadImage("./data/" + data + "/images/wK.png");
+        images[1] = loadImage("./data/" + data + "/images/bK.png");
+        images[2] = loadImage("./data/" + data + "/images/wQ.png");
+        images[3] = loadImage("./data/" + data + "/images/bQ.png");
+        images[4] = loadImage("./data/" + data + "/images/wR.png");
+        images[5] = loadImage("./data/" + data + "/images/bR.png");
+        images[6] = loadImage("./data/" + data + "/images/wB.png");
+        images[7] = loadImage("./data/" + data + "/images/bB.png");
+        images[8] = loadImage("./data/" + data + "/images/wN.png");
+        images[9] = loadImage("./data/" + data + "/images/bN.png");
+        images[10] = loadImage("./data/" + data + "/images/wP.png");
+        images[11] = loadImage("./data/" + data + "/images/bP.png");
+        images[12] = loadImage("./data/" + data + "/images/board.png");
+        images[13] = loadImage("./data/" + data + "/images/rank_top.png");
+        images[14] = loadImage("./data/" + data + "/images/rank_bottom.png");
+        images[15] = loadImage("./data/" + data + "/images/file_left.png");
+        images[16] = loadImage("./data/" + data + "/images/file_right.png");
+        images[17] = loadImage("./data/" + data + "/images/light_square.png");
+        images[18] = loadImage("./data/" + data + "/images/dark_square.png");
     }
+
     public void draw() {
         if (firstDraw) {
             start.play();
             setFromFEN(board.fen);
-            tempImage = screen.get();
+            tempImage = get();
             //chess.println(Evaluation.evaluate(board));
             firstDraw = false;
             return;
@@ -80,32 +90,37 @@ public class chessboard {
                     playSound(capture); //play the correct sound
                     setFromFEN(board.fen); //update GUI board from logical board fen.
                     chess.println(Evaluation.evaluate(board));
-                    //  chess.println(Evaluation.endGame(board));
+                   //  chess.println(Evaluation.endGame(board));
                     if (board.gameOver) {// move made ends the game
                         chess.print("\r\n" + board.result); //show game results (want to move out of console)
                         tintScreen(); //darkens the screen to show game over.
-                        tempImage = screen.get(); //updates tempImage
+                        tempImage = get(); //updates tempImage
                     }
                     move = ""; //reset move
                     return;
                 }
                 //This is only reached if move attempted wasn't a legal move
-                screen.background(tempImage); //This ensures piece being held snaps back to position
+                background(tempImage); //This ensures piece being held snaps back to position
                 error.play(); //play illegal move sound
                 move = ""; //reset move
             }
         }
     }
+
+    /**
+     * darkens the screen.
+     * Used to show game over.
+     */
     public void tintScreen() {
-        screen.fill(30, 80);
-        screen.rect(0, 0, 1920, 1080);
+        fill(30, 80);
+        rect(0, 0, 1920, 1080);
     }
 
     public String randomMove(int a) {
         ArrayList<String> temp = new ArrayList<>(board.legalMoves);
         Collections.shuffle(temp);
         if (temp.size() != 0) {
-            screen.delay(a);
+            delay(a);
             return temp.get(0);
         }
         return move;
@@ -142,7 +157,7 @@ public class chessboard {
         }
         String[] res = dog.move();
         if (!res[0].equals("")) {
-            // print(res);
+           // print(res);
             return res[0];
         } else
             return new String[]{move, "", ""}[0];
@@ -207,27 +222,27 @@ public class chessboard {
             flipped = last[1].equals("b");
         }
         drawScreen();
-        tempImage = screen.get();
+        tempImage = get();
     }
 
     public boolean lookingForPickupPiece() {
-        int x = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
-        int y = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
+        int x = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
+        int y = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
         if (flipped)
-            return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0) && (pieceBoard[7 - x][7 - y] != ' ');
+            return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[7 - x][7 - y] != ' ');
         else
-            return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0) && (pieceBoard[x][y] != ' ');
+            return mouseOnBoard() && ((!mousePressed) && move.length() == 0) && (pieceBoard[x][y] != ' ');
     }
 
     public boolean holdingPiece() {
-        return screen.mousePressed && screen.mouseButton == screen.LEFT && move.length() == 2;
+        return mousePressed && mouseButton == LEFT && move.length() == 2;
     }
 
     public void drawSelectionHighlight() {
-        screen.background(tempImage);
-        tempImage = screen.get();
-        int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-        int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+        background(tempImage);
+        tempImage = get();
+        int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+        int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
         if (flipped) {
             x = 7 - x;
             y = 7 - y;
@@ -238,26 +253,26 @@ public class chessboard {
     }
 
     public boolean mouseOnBoard() {
-        return 448 * widthP < ((screen.mouseX)) && ((screen.mouseX)) < 1472 * widthP && 28 * heightP < ((screen.mouseY)) && ((screen.mouseY)) < 1052 * heightP;
+        return 448 * widthP < ((mouseX)) && ((mouseX)) < 1472 * widthP && 28 * heightP < ((mouseY)) && ((mouseY)) < 1052 * heightP;
     }
 
     public void keyPressed() {
-        if (screen.key == screen.ESC) {
-            screen.key = 0;
+        if (key == ESC) {
+            key = 0;
             reset();
             return;
         }
-        if (screen.key == ' ') {
+        if (key == ' ') {
             flipped = !flipped;
             drawScreen();
-            tempImage = screen.get();
+            tempImage = get();
             return;
         }
-        if (screen.keyCode == screen.LEFT) {
+        if (keyCode == LEFT) {
             board.rollback(2);
             setFromFEN(board.fen);
         }
-        if (screen.keyCode == screen.RIGHT) {
+        if (keyCode == RIGHT) {
             board.rollForward(2);
             setFromFEN(board.fen);
         }
@@ -268,8 +283,8 @@ public class chessboard {
         if (move.length() == 2) {
             if (mouseOnBoard()) {
 
-                int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-                int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+                int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+                int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
                 if (flipped) {
                     x = 7 - x;
                     y = 7 - y;
@@ -278,23 +293,23 @@ public class chessboard {
                 int yRank = 8 - y;
                 if ((move.equals("" + xFile + yRank))) {
                     move = "";
-                    screen.background(tempImage);
+                    background(tempImage);
                 } else {
                     move += "" + xFile + yRank;
                 }
             } else {
                 move = "";
-                screen.background(tempImage);
+                background(tempImage);
             }
         }
     }
 
     public void mousePressed() {
-        if (mouseOnBoard() && screen.mouseButton == screen.LEFT && move.length() == 0) {
-            screen.background(tempImage);
-            tempImage = screen.get();
-            int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+        if (mouseOnBoard() && mouseButton == LEFT && move.length() == 0) {
+            background(tempImage);
+            tempImage = get();
+            int x = (int) ((((mouseX)) - 448 * widthP) / (128 * widthP));
+            int y = (int) ((((mouseY)) - 28 * heightP) / (128 * heightP));
             if (flipped) {
                 x = 7 - x;
                 y = 7 - y;
@@ -307,18 +322,18 @@ public class chessboard {
     }
 
     public void drawScreen() {
-        screen.tint(180);
-        screen.strokeWeight(0);
-        screen.background((float) (173 * .5), (float) (216 * .5), (float) (230 * .5));
-        screen.fill(board.turn.equals("white") ? 180 : 0);
-        screen.rect(448 - 20, 28 - 20, 1024 + 40, 1024 + 40);
-        screen.image(images[12], 448, 28, 1024, 1024);
+        tint(180);
+        strokeWeight(0);
+        background((float) (173 * .5), (float) (216 * .5), (float) (230 * .5));
+        fill(board.turn.equals("white") ? 180 : 0);
+        rect(448 - 20, 28 - 20, 1024 + 40, 1024 + 40);
+        image(images[12], 448, 28, 1024, 1024);
         if (!flipped) {
-            screen.image(images[15], 448, 28);
-            screen.image(images[14], 448, 1052 - 38);
+            image(images[15], 448, 28);
+            image(images[14], 448, 1052 - 38);
         } else {
-            screen.image(images[13], 448, 1052 - 1024);
-            screen.image(images[16], 448 - 35 + 1024, 28);
+            image(images[13], 448, 1052 - 1024);
+            image(images[16], 448 - 35 + 1024, 28);
         }
         drawLastMove();
         for (int r = 0; r < 8; r++) {
@@ -326,15 +341,15 @@ public class chessboard {
                 drawPiece(r, c);
             }
         }
-        tempImage = screen.get();
+        tempImage = get();
     }
 
     public void drawLastMove() {
         String lastMove = board.allMovesMade.size() != 0 ? board.allMovesMade.get(board.allMovesMade.size() - 1) : "";
         if (lastMove.length() == 0)
             return;
-        screen.fill(250, 247, 39, 30);
-        screen.strokeWeight(0);
+        fill(250, 247, 39, 30);
+        strokeWeight(0);
         int a = convertFileToInt(lastMove.charAt(0));
         int b = 8 - Integer.parseInt("" + lastMove.charAt(1));
         int c = convertFileToInt(lastMove.charAt(2));
@@ -345,8 +360,8 @@ public class chessboard {
             c = 7 - c;
             d = 7 - d;
         }
-        screen.rect(447 + 128 * a, 27 + 128 * b, 128, 128);
-        screen.rect(447 + 128 * c, 27 + 128 * d, 128, 128);
+        rect(447 + 128 * a, 27 + 128 * b, 128, 128);
+        rect(447 + 128 * c, 27 + 128 * d, 128, 128);
     }
 
     public int convertFileToInt(char c) {
@@ -374,9 +389,9 @@ public class chessboard {
             team = 1;
         }
         if (flipped)
-            screen.image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * (7 - c), 28 + 128 * (7 - r), 128, 128);
+            image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * (7 - c), 28 + 128 * (7 - r), 128, 128);
         else
-            screen.image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * c, 28 + 128 * r, 128, 128);
+            image(images[temp + (team == 0 ? 0 : 1)], 448 + 128 * c, 28 + 128 * r, 128, 128);
     }
 
     public void drawFloatingPiece(String location) {
@@ -406,16 +421,16 @@ public class chessboard {
         } else {
             team = 1;
         }
-        screen.background(tempImage);
-        screen.image(images[(r + c) % 2 == 0 ? 17 : 18], 448 + 128 * c, 28 + 128 * r, 128, 128);
+        background(tempImage);
+        image(images[(r + c) % 2 == 0 ? 17 : 18], 448 + 128 * c, 28 + 128 * r, 128, 128);
         if ((!lastMove.equals("")) && (location.equals(lastMove.substring(0, 2)) || location.equals(lastMove.substring(2)))) {
-            screen.fill(250, 247, 39, 30);
-            screen.strokeWeight(0);
-            screen.rect(447 + 128 * c, 27 + 128 * r, 129, 129);
+            fill(250, 247, 39, 30);
+            strokeWeight(0);
+            rect(447 + 128 * c, 27 + 128 * r, 129, 129);
         }
 
         showLegalMoves(location);
-        screen.image(images[temp + (team == 0 ? 0 : 1)], screen.mouseX - 64, screen.mouseY - 64, 128, 128);
+        image(images[temp + (team == 0 ? 0 : 1)], mouseX - 64, mouseY - 64, 128, 128);
     }
 
     public void showLegalMoves(String location) {
@@ -427,9 +442,9 @@ public class chessboard {
                     r1 = 7 - r1;
                     c1 = 7 - c1;
                 }
-                screen.fill(30, 80);
-                screen.strokeWeight(0);
-                screen.circle(64 + 447 + 128 * c1, 64 + 27 + 128 * r1, 50);
+                fill(30, 80);
+                strokeWeight(0);
+                circle(64 + 447 + 128 * c1, 64 + 27 + 128 * r1, 50);
             }
         }
     }
@@ -451,6 +466,29 @@ public class chessboard {
         int x = convertFileToInt(s.charAt(0));
         int y = 8 - Integer.parseInt("" + s.charAt(1));
         return pieceBoard[y][x];
+    }
+
+    /*
+    Override methods to ensure that board is properly rendered on other resolutions.
+     */
+    public void rect(float a, float b, float c, float d) {
+        super.rect(widthP * a, heightP * b, widthP * c, heightP * d);
+    }
+
+    public void textSize(float s) {
+        super.textSize(widthP * s);
+    }
+
+    public void text(String s, float a, float b) {
+        super.text(s, widthP * a, heightP * b);
+    }
+
+    public void image(PImage img, float a, float b) {
+        super.image(img, widthP * a, heightP * b, widthP * img.width, widthP * img.height);
+    }
+
+    public void image(PImage img, float a, float b, float x, float y) {
+        super.image(img, widthP * a, heightP * b, widthP * x, widthP * y);
     }
 
 }
