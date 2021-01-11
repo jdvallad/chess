@@ -1,389 +1,10 @@
 import java.util.*;
 
 public class chess {
-    /*
-      Begin static class methods and variables.
-     */
-
-
-    /**
-     * Sensible print method so I don't go insane.
-     * If one element, prints it with a linebreak.
-     * Otherwise, prints all elements with spaces in between and NO linebreak.
-     */
-    public static void print(Object... args) {
-
-        if (args.length == 1) {
-            System.out.println(args[0]);
-        } else {
-            StringBuilder res = new StringBuilder();
-            for (Object o : args) {
-                res.append(o);
-            }
-            System.out.print(res);
-        }
-    }
-
-    public static void println(Object... args) {
-        System.out.print("\r\n");
-        if (args.length == 1) {
-            System.out.println(args[0]);
-        } else {
-            StringBuilder res = new StringBuilder();
-            for (Object o : args) {
-                res.append(o);
-            }
-            System.out.print(res);
-        }
-    }
-
-    /**
-     * This stores all longs associated with files and ranks
-     * They are to be accessed through the accessor methods below.
-     */
-    private static final HashMap<String, Long> fr_temp = fr_initializer();
-
-    /**
-     * This initializes fr_temp with all the correct long values associated with each file and rank.
-     * Negated files and ranks are also stored.
-     */
-    private static HashMap<String, Long> fr_initializer() {
-        HashMap<String, Long> a = new HashMap<>();
-        for (char r : new char[]{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}) {
-            a.put("" + r, board_builder(r));
-            a.put("~" + r, ~board_builder(r));
-        }
-        for (int i = 1; i < 9; i++) {
-            a.put("" + i, board_builder(i));
-            a.put("-" + i, ~board_builder(i));
-        }
-        return a;
-    }
-
-    /**
-     * accessor method for getting files and ranks.
-     * If ~ or - are used for files or ranks respectully, the negated long will be returned.
-     */
-    public static long fr(Object a) {
-        return fr_temp.get("" + a);
-    }
-
-    /**
-     * returns union of all ranks or files listed in args.
-     */
-    public static long fr_or(Object... args) {
-        long res = 0;
-        for (Object o : args) {
-            res |= fr(o);
-        }
-        return res;
-    }
-
-    /**
-     * returns intersection of all ranks or files listed in args.
-     */
-    public static long fr_and(Object... args) {
-        long res = fr(args[0]);
-        for (Object o : args) {
-            res &= fr(o);
-        }
-        return res;
-    }
-
-    /**
-     * returns the rank of square at a if a is the index while looping over the board.
-     */
-    public static int rank(int a) {
-        return 8 - ((63 - a) >>> 3);
-    }
-
-    /**
-     * returns the file of square at a if a is the index while looping over the board.
-     */
-    public static char file(int a) {
-        return (char) (((63 - a) & 7) + 97);
-    }
-
-    /**
-     * returns the file and rank of square at a if a is the index while looping over the board.
-     */
-    public static String file_and_rank(int a) {
-        return "" + file(a) + rank(a);
-    }
-
-    /**
-     * Directional Methods that take string representations of squares and shift them in the given cardinal direction, from white's perspective.
-     * e.g. n("e2") = "e3"
-     * If return square is not on the board, "-1" is returned.
-     * If "-1" is input, "-1" is also returned.
-     */
-    public static String n(String s) {
-        if (s.equals("-1") || s.charAt(1) >= '8') {
-            return "-1";
-        }
-        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) + 1);
-    }
-
-    public static String s(String s) {
-        if (s.equals("-1") || s.charAt(1) <= '1') {
-            return "-1";
-        }
-        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) - 1);
-    }
-
-    public static String e(String s) {
-        if (s.equals("-1") || s.charAt(0) == 'h') {
-            return "-1";
-        }
-        return "" + ((char) (s.charAt(0) + 1)) + s.charAt(1);
-    }
-
-    public static String w(String s) {
-        if (s.equals("-1") || s.charAt(0) == 'a') {
-            return "-1";
-        }
-        return "" + ((char) (s.charAt(0) - 1)) + s.charAt(1);
-    }
-
-    public static String nw(String a) {
-        return n(w(a));
-    }
-
-    public static String ne(String a) {
-        return n(e(a));
-    }
-
-    public static String se(String a) {
-        return s(e(a));
-    }
-
-    public static String sw(String a) {
-        return s(w(a));
-    }
-
-
-    public static String nne(String a) {
-        return n(ne(a));
-    }
-
-    public static String nee(String a) {
-        return ne(e(a));
-    }
-
-    public static String nnw(String a) {
-        return n(nw(a));
-    }
-
-    public static String nww(String a) {
-        return nw(w(a));
-    }
-
-    public static String sse(String a) {
-        return s(se(a));
-    }
-
-    public static String see(String a) {
-        return se(e(a));
-    }
-
-    public static String ssw(String a) {
-        return s(sw(a));
-    }
-
-    public static String sww(String a) {
-        return sw(w(a));
-    }
-
-    /*
-      End of Directional String methods.
-     */
-
-    /**
-     * Directional Methods that take long bitboards and shift them in the given cardinal direction, from white's perspective.
-     * Any bit that would shift off the board becomes a 0.
-     * There is no wrap around, so bits shifting off the board cannot be retrieved.
-     * A consequence of this is that n(s(a)) = a is not guaranteed.
-     */
-    public static long n(long a) {
-        return a >>> 8 & fr(-1);
-    }
-
-    public static long s(long a) {
-        return a << 8 & fr(-8);
-    }
-
-    public static long e(long a) {
-        return (a << 1) & fr("~a");
-    }
-
-    public static long w(long a) {
-        return (a >>> 1) & fr("~h");
-    }
-
-    public static long nw(long a) {
-        return n(w(a));
-    }
-
-    public static long ne(long a) {
-        return n(e(a));
-    }
-
-    public static long se(long a) {
-        return s(e(a));
-    }
-
-    public static long sw(long a) {
-        return s(w(a));
-    }
-
-
-    public static long nne(long a) {
-        return n(ne(a));
-    }
-
-    public static long nee(long a) {
-        return ne(e(a));
-    }
-
-    public static long nnw(long a) {
-        return n(nw(a));
-    }
-
-    public static long nww(long a) {
-        return nw(w(a));
-    }
-
-    public static long sse(long a) {
-        return s(se(a));
-    }
-
-    public static long see(long a) {
-        return se(e(a));
-    }
-
-    public static long ssw(long a) {
-        return s(sw(a));
-    }
-
-    public static long sww(long a) {
-        return sw(w(a));
-    }
-
-    /*
-      End of Directional Long methods.
-     */
-
-    /**
-     * Board builder methods that take in a rank,file, or both and returns a long representing it.
-     */
-    public static long board_builder(char a) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (file(i) == a) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
-
-    public static long board_builder(String a) {
-        if (a.length() == 1) {
-            StringBuilder str = new StringBuilder();
-            for (int i = 0; i < 64; i++) {
-                if (("" + file(i)).equals(a)) {
-                    str.append('1');
-                } else {
-                    str.append('0');
-                }
-            }
-            return Long.parseUnsignedLong(str.toString(), 2);
-        }
-        assert (a.length() == 2);
-        char f = a.charAt(0);
-        int r = Integer.parseInt("" + a.charAt(1));
-        return board_builder(f, r);
-    }
-
-    public static long board_builder(int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
-
-    public static long board_builder(char a, int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (file(i) == a && rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
-
-    public static long board_builder(String a, int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (("" + file(i)).equals(a) && rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
-
-    /*
-      End of Board builder methods.
-     */
-
-    /**
-     * Takes in a long representing a bitboard and converts it into a list of Strings representing all squares within the long.
-     */
-    public static ArrayList<String> longToStrings(Long l) {
-        ArrayList<String> res = new ArrayList<>();
-        for (int i = 63; i >= 0; i--) {
-            if ((l >>> i & 1) == 1L)
-                res.add(file_and_rank(63 - i));
-        }
-        return res;
-    }
-
-    /**
-     * prints the bitboard represented by the long in order to visualize it.
-     */
-    public static void print_bitboard(long a) {
-        System.out.print("8 | ");
-        for (int i = 0; i < 64; i++) {
-            long temp = (a) >>> i & 1;
-            System.out.print((temp != 0 ? temp : "*") + " ");
-            if ((i + 1) % 8 == 0 && i != 63) {
-                System.out.print("\r\n" + (7 - (i >>> 3)) + " | ");
-            }
-        }
-        System.out.println("\r\n  -----------------");
-        System.out.println("    a b c d e f g h");
-    }
-
-
-    /*
-      End static class methods and variables.
-     */
-
 
     /**
      * Begin non-static class methods and variables.
      */
-
 
     HashMap<String, Long> pieces;
     ArrayList<String> allMovesMade = new ArrayList<>();
@@ -492,6 +113,7 @@ public class chess {
         psuedoLegalMoves = updatePsuedoLegalMoves();
         legalMoves = updateLegalMoves();
         gameOver = false;
+        result = "";
         checkForGameOver();
     }
 
@@ -704,6 +326,13 @@ public class chess {
     }
 
     /**
+     * returns last move if applicable, otherwise ""
+     */
+    public String lastMove() {
+        return allMovesMade.size() == 0 ? "" : allMovesMade.get(allMovesMade.size() - 1);
+    }
+
+    /**
      * initializes the piece map with default values.
      * Values are immediately overwritten in setFromFEN.
      */
@@ -771,6 +400,36 @@ public class chess {
         if (castleRights[3] && from == 'r' && move[0].equals("a8")) { //black queenside rook move
             castleRights[3] = false;
         }
+    }
+
+    public String moveType(String move) {
+        boolean capture = isCapture(move);
+        boolean castle = false;
+        boolean promotion = false;
+        if (pieceAt(move.substring(0, 2)) == 'P' && move.charAt(3) == '8')
+            promotion = true;
+        if (pieceAt(move.substring(0, 2)) == 'p' && move.charAt(3) == '1')
+            promotion = true;
+        if (castleRights[0] && move.equals("e1g1"))
+            castle = true;
+        if (castleRights[1] && move.equals("e1c1"))
+            castle = true;
+        if (castleRights[2] && move.equals("e8g8"))
+            castle = true;
+        if (castleRights[3] && move.equals("e8c8"))
+            castle = true;
+        chess shadow = nextBoard(move);
+        if (shadow.gameOver)
+            return "gameOver";
+        if (shadow.inCheck())
+            return "check";
+        if (promotion)
+            return "promotion";
+        if (capture)
+            return "capture";
+        if (castle)
+            return "castle";
+        return "move";
     }
 
     /**
@@ -1255,16 +914,16 @@ public class chess {
         HashSet<String> temp = updatePsuedoLegalMoves();
         turn = turn.equals("white") ? "black" : "white";
         for (String str : temp) {
-            if (res.contains("e1g1") && str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck()) {
+            if (res.contains("e1g1") && castleRights[0] && (str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck())) {
                 res.remove("e1g1");
             }
-            if (res.contains("e1c1") && str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck()) {
+            if (res.contains("e1c1") && castleRights[1] && (str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck())) {
                 res.remove("e1c1");
             }
-            if (res.contains("e8g8") && str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck()) {
+            if (res.contains("e8g8") && castleRights[2] && (str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck())) {
                 res.remove("e8g8");
             }
-            if (res.contains("e8c8") && str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck()) {
+            if (res.contains("e8c8") && castleRights[3] && (str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck())) {
                 res.remove("e8c8");
             }
         }
@@ -1336,12 +995,12 @@ public class chess {
     public ArrayList<String> bishopNorthEastMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!ne(temp).equals("-1")) && pieceAt(ne(temp)) == ' ') {
+        while ((!ne(temp).equals("-1")) && (pieceAt(ne(temp)) == ' ')) {
             temp = ne(temp);
             res.add(str + temp);
         }
         if ((!ne(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp)))
+                (isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp))))
         ) {
             temp = ne(temp);
             res.add(str + temp);
@@ -1355,12 +1014,12 @@ public class chess {
     public ArrayList<String> bishopNorthWestMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!nw(temp).equals("-1")) && pieceAt(nw(temp)) == ' ') {
+        while ((!nw(temp).equals("-1")) && (pieceAt(nw(temp)) == ' ')) {
             temp = nw(temp);
             res.add(str + temp);
         }
         if ((!nw(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp)))
+                (isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp))))
         ) {
             temp = nw(temp);
             res.add(str + temp);
@@ -1374,12 +1033,12 @@ public class chess {
     public ArrayList<String> bishopSouthEastMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!se(temp).equals("-1")) && pieceAt(se(temp)) == ' ') {
+        while ((!se(temp).equals("-1")) && (pieceAt(se(temp)) == ' ')) {
             temp = se(temp);
             res.add(str + temp);
         }
         if ((!se(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp)))
+                (isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp))))
         ) {
             temp = se(temp);
             res.add(str + temp);
@@ -1393,12 +1052,12 @@ public class chess {
     public ArrayList<String> bishopSouthWestMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!sw(temp).equals("-1")) && pieceAt(sw(temp)) == ' ') {
+        while ((!sw(temp).equals("-1")) && (pieceAt(sw(temp)) == ' ')) {
             temp = sw(temp);
             res.add(str + temp);
         }
         if ((!sw(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp)))
+                (isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp))))
         ) {
             temp = sw(temp);
             res.add(str + temp);
@@ -1412,12 +1071,12 @@ public class chess {
     public ArrayList<String> rookNorthMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!n(temp).equals("-1")) && pieceAt(n(temp)) == ' ') {
+        while ((!n(temp).equals("-1")) && (pieceAt(n(temp)) == ' ')) {
             temp = n(temp);
             res.add(str + temp);
         }
         if ((!n(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp)))
+                (isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp))))
         ) {
             temp = n(temp);
             res.add(str + temp);
@@ -1431,12 +1090,12 @@ public class chess {
     public ArrayList<String> rookSouthMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!s(temp).equals("-1")) && pieceAt(s(temp)) == ' ') {
+        while ((!s(temp).equals("-1")) && (pieceAt(s(temp)) == ' ')) {
             temp = s(temp);
             res.add(str + temp);
         }
         if ((!s(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp)))
+                (isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp))))
         ) {
             temp = s(temp);
             res.add(str + temp);
@@ -1450,12 +1109,12 @@ public class chess {
     public ArrayList<String> rookEastMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!e(temp).equals("-1")) && pieceAt(e(temp)) == ' ') {
+        while ((!e(temp).equals("-1")) && (pieceAt(e(temp)) == ' ')) {
             temp = e(temp);
             res.add(str + temp);
         }
         if ((!e(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp)))
+                (isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp))))
         ) {
             temp = e(temp);
             res.add(str + temp);
@@ -1469,12 +1128,12 @@ public class chess {
     public ArrayList<String> rookWestMoves(char c, String str) {
         ArrayList<String> res = new ArrayList<>();
         String temp = str;
-        while ((!w(temp).equals("-1")) && pieceAt(w(temp)) == ' ') {
+        while ((!w(temp).equals("-1")) && (pieceAt(w(temp)) == ' ')) {
             temp = w(temp);
             res.add(str + temp);
         }
         if ((!w(temp).equals("-1")) &&
-                isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp)))
+                (isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp))))
         ) {
             temp = w(temp);
             res.add(str + temp);
@@ -1563,5 +1222,381 @@ public class chess {
 
     /*
       End non-static class methods and variables.
+     */
+     /*
+      Begin static class methods and variables.
+     */
+
+
+    /**
+     * Sensible print method so I don't go insane.
+     * If one element, prints it with a linebreak.
+     * Otherwise, prints all elements with spaces in between and NO linebreak.
+     */
+    public static void print(Object... args) {
+
+        if (args.length == 1) {
+            System.out.println(args[0]);
+        } else {
+            StringBuilder res = new StringBuilder();
+            for (Object o : args) {
+                res.append(o);
+            }
+            System.out.print(res);
+        }
+    }
+
+    public static void println(Object... args) {
+        System.out.print("\r\n");
+        if (args.length == 1) {
+            System.out.println(args[0]);
+        } else {
+            StringBuilder res = new StringBuilder();
+            for (Object o : args) {
+                res.append(o);
+            }
+            System.out.print(res);
+        }
+    }
+
+    /**
+     * This stores all longs associated with files and ranks
+     * They are to be accessed through the accessor methods below.
+     */
+    private static final HashMap<String, Long> fr_temp = fr_initializer();
+
+    /**
+     * This initializes fr_temp with all the correct long values associated with each file and rank.
+     * Negated files and ranks are also stored.
+     */
+    private static HashMap<String, Long> fr_initializer() {
+        HashMap<String, Long> a = new HashMap<>();
+        for (char r : new char[]{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}) {
+            a.put("" + r, board_builder(r));
+            a.put("~" + r, ~board_builder(r));
+        }
+        for (int i = 1; i < 9; i++) {
+            a.put("" + i, board_builder(i));
+            a.put("-" + i, ~board_builder(i));
+        }
+        return a;
+    }
+
+    /**
+     * accessor method for getting files and ranks.
+     * If ~ or - are used for files or ranks respectully, the negated long will be returned.
+     */
+    public static long fr(Object a) {
+        return fr_temp.get("" + a);
+    }
+
+    /**
+     * returns union of all ranks or files listed in args.
+     */
+    public static long fr_or(Object... args) {
+        long res = 0;
+        for (Object o : args) {
+            res |= fr(o);
+        }
+        return res;
+    }
+
+    /**
+     * returns intersection of all ranks or files listed in args.
+     */
+    public static long fr_and(Object... args) {
+        long res = fr(args[0]);
+        for (Object o : args) {
+            res &= fr(o);
+        }
+        return res;
+    }
+
+    /**
+     * returns the rank of square at a if a is the index while looping over the board.
+     */
+    public static int rank(int a) {
+        return 8 - ((63 - a) >>> 3);
+    }
+
+    /**
+     * returns the file of square at a if a is the index while looping over the board.
+     */
+    public static char file(int a) {
+        return (char) (((63 - a) & 7) + 97);
+    }
+
+    /**
+     * returns the file and rank of square at a if a is the index while looping over the board.
+     */
+    public static String file_and_rank(int a) {
+        return "" + file(a) + rank(a);
+    }
+
+    /**
+     * Directional Methods that take string representations of squares and shift them in the given cardinal direction, from white's perspective.
+     * e.g. n("e2") = "e3"
+     * If return square is not on the board, "-1" is returned.
+     * If "-1" is input, "-1" is also returned.
+     */
+    public static String n(String s) {
+        if (s.equals("-1") || s.charAt(1) >= '8') {
+            return "-1";
+        }
+        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) + 1);
+    }
+
+    public static String s(String s) {
+        if (s.equals("-1") || s.charAt(1) <= '1') {
+            return "-1";
+        }
+        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) - 1);
+    }
+
+    public static String e(String s) {
+        if (s.equals("-1") || s.charAt(0) == 'h') {
+            return "-1";
+        }
+        return "" + ((char) (s.charAt(0) + 1)) + s.charAt(1);
+    }
+
+    public static String w(String s) {
+        if (s.equals("-1") || s.charAt(0) == 'a') {
+            return "-1";
+        }
+        return "" + ((char) (s.charAt(0) - 1)) + s.charAt(1);
+    }
+
+    public static String nw(String a) {
+        return n(w(a));
+    }
+
+    public static String ne(String a) {
+        return n(e(a));
+    }
+
+    public static String se(String a) {
+        return s(e(a));
+    }
+
+    public static String sw(String a) {
+        return s(w(a));
+    }
+
+
+    public static String nne(String a) {
+        return n(ne(a));
+    }
+
+    public static String nee(String a) {
+        return ne(e(a));
+    }
+
+    public static String nnw(String a) {
+        return n(nw(a));
+    }
+
+    public static String nww(String a) {
+        return nw(w(a));
+    }
+
+    public static String sse(String a) {
+        return s(se(a));
+    }
+
+    public static String see(String a) {
+        return se(e(a));
+    }
+
+    public static String ssw(String a) {
+        return s(sw(a));
+    }
+
+    public static String sww(String a) {
+        return sw(w(a));
+    }
+
+    /*
+      End of Directional String methods.
+     */
+
+    /**
+     * Directional Methods that take long bitboards and shift them in the given cardinal direction, from white's perspective.
+     * Any bit that would shift off the board becomes a 0.
+     * There is no wrap around, so bits shifting off the board cannot be retrieved.
+     * A consequence of this is that n(s(a)) = a is not guaranteed.
+     */
+    public static long n(long a) {
+        return a >>> 8 & fr(-1);
+    }
+
+    public static long s(long a) {
+        return a << 8 & fr(-8);
+    }
+
+    public static long e(long a) {
+        return (a << 1) & fr("~a");
+    }
+
+    public static long w(long a) {
+        return (a >>> 1) & fr("~h");
+    }
+
+    public static long nw(long a) {
+        return n(w(a));
+    }
+
+    public static long ne(long a) {
+        return n(e(a));
+    }
+
+    public static long se(long a) {
+        return s(e(a));
+    }
+
+    public static long sw(long a) {
+        return s(w(a));
+    }
+
+
+    public static long nne(long a) {
+        return n(ne(a));
+    }
+
+    public static long nee(long a) {
+        return ne(e(a));
+    }
+
+    public static long nnw(long a) {
+        return n(nw(a));
+    }
+
+    public static long nww(long a) {
+        return nw(w(a));
+    }
+
+    public static long sse(long a) {
+        return s(se(a));
+    }
+
+    public static long see(long a) {
+        return se(e(a));
+    }
+
+    public static long ssw(long a) {
+        return s(sw(a));
+    }
+
+    public static long sww(long a) {
+        return sw(w(a));
+    }
+
+    /*
+      End of Directional Long methods.
+     */
+
+    /**
+     * Board builder methods that take in a rank,file, or both and returns a long representing it.
+     */
+    public static long board_builder(char a) {
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < 64; i++) {
+            if (file(i) == a) {
+                str.append('1');
+            } else {
+                str.append('0');
+            }
+        }
+        return Long.parseUnsignedLong(str.toString(), 2);
+    }
+
+    public static long board_builder(String a) {
+        if (a.length() == 1) {
+            StringBuilder str = new StringBuilder();
+            for (int i = 0; i < 64; i++) {
+                if (("" + file(i)).equals(a)) {
+                    str.append('1');
+                } else {
+                    str.append('0');
+                }
+            }
+            return Long.parseUnsignedLong(str.toString(), 2);
+        }
+        assert (a.length() == 2);
+        char f = a.charAt(0);
+        int r = Integer.parseInt("" + a.charAt(1));
+        return board_builder(f, r);
+    }
+
+    public static long board_builder(int b) {
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < 64; i++) {
+            if (rank(i) == b) {
+                str.append('1');
+            } else {
+                str.append('0');
+            }
+        }
+        return Long.parseUnsignedLong(str.toString(), 2);
+    }
+
+    public static long board_builder(char a, int b) {
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < 64; i++) {
+            if (file(i) == a && rank(i) == b) {
+                str.append('1');
+            } else {
+                str.append('0');
+            }
+        }
+        return Long.parseUnsignedLong(str.toString(), 2);
+    }
+
+    public static long board_builder(String a, int b) {
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < 64; i++) {
+            if (("" + file(i)).equals(a) && rank(i) == b) {
+                str.append('1');
+            } else {
+                str.append('0');
+            }
+        }
+        return Long.parseUnsignedLong(str.toString(), 2);
+    }
+
+    /*
+      End of Board builder methods.
+     */
+
+    /**
+     * Takes in a long representing a bitboard and converts it into a list of Strings representing all squares within the long.
+     */
+    public static ArrayList<String> longToStrings(Long l) {
+        ArrayList<String> res = new ArrayList<>();
+        for (int i = 63; i >= 0; i--) {
+            if ((l >>> i & 1) == 1L)
+                res.add(file_and_rank(63 - i));
+        }
+        return res;
+    }
+
+    /**
+     * prints the bitboard represented by the long in order to visualize it.
+     */
+    public static void print_bitboard(long a) {
+        System.out.print("8 | ");
+        for (int i = 0; i < 64; i++) {
+            long temp = (a) >>> i & 1;
+            System.out.print((temp != 0 ? temp : "*") + " ");
+            if ((i + 1) % 8 == 0 && i != 63) {
+                System.out.print("\r\n" + (7 - (i >>> 3)) + " | ");
+            }
+        }
+        System.out.println("\r\n  -----------------");
+        System.out.println("    a b c d e f g h");
+    }
+
+    /*
+      End static class methods and variables.
      */
 }
