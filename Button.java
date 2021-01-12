@@ -21,11 +21,11 @@ public abstract class Button {
         width = w;
         height = h;
         if (x < 0)
-            xPosition = screen.width + x - width;
+            xPosition = 1920f + x - width;
         else
             xPosition = x;
         if (y < 0)
-            yPosition = screen.height + y - height;
+            yPosition = 1080f + y - height;
         else
             yPosition = y;
     }

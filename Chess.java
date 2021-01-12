@@ -546,17 +546,19 @@ public class Chess {
     /**
      * rolls the game back n times, or as far as far back as the last set fen.
      */
-    public void rollback(int n) {
+    public String rollback(int n) {
         for (int i = 0; i < n; i++)
             rollback();
+        return "";
     }
 
     /**
      * rolls the game forward n times, or as far as forward as the game was played.
      */
-    public void rollForward(int n) {
+    public String rollForward(int n) {
         for (int i = 0; i < n; i++)
             rollForward();
+        return "";
     }
 
     /**

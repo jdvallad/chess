@@ -48,7 +48,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, screen.loadImage("./data/buttons/back.png"), "back", true, 50f, -50f, .8f) {
                     public void action() {
-                        board.playSound(logic.rollback());
+                        board.playSound(logic.rollback(2));
                         board.setFromFEN(logic.fen);
                         snap();
                     }
@@ -56,7 +56,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, screen.loadImage("./data/buttons/forward.png"), "forward", true, -50f, -50f, .8f) {
                     public void action() {
-                        board.playSound(logic.rollForward());
+                        board.playSound(logic.rollForward(2));
                         board.setFromFEN(logic.fen);
                         snap();
                     }
@@ -90,7 +90,7 @@ public class GameScene extends Scene {
             return;
         }
         refresh();
-        move = getMove(move, "human", "stock,7,20");
+        move = getMove(move, "human", "stock,7,10");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
         board.drawLastMove(logic.lastMove());
@@ -189,6 +189,8 @@ public class GameScene extends Scene {
     }
 
     public void keyPressed() {
+        if (screen.key == screen.ESC)
+            screen.key = 0;
     }
 
     public void keyReleased() {

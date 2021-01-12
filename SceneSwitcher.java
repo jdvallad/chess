@@ -88,7 +88,9 @@ Override methods to ensure that board is properly rendered on other resolutions.
     public void rect(float a, float b, float c, float d) {
         super.rect(widthP * a, heightP * b, widthP * c, heightP * d);
     }
-
+    public void circle(float a, float b, float c) {
+        super.circle(widthP * a, heightP * b, widthP * c);
+    }
     public void textSize(float s) {
         super.textSize(widthP * s);
     }
