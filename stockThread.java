@@ -1,11 +1,11 @@
 public class stockThread extends Thread {
-    chess board;
+    Chess board;
     private String move = "";
     private final int depth;
     private final int difficulty;
     private final Stockfish stock;
 
-    public stockThread(chess b,Stockfish s, int d,int diff) {
+    public stockThread(Chess b, Stockfish s, int d, int diff) {
         board = b;
         depth = d;
         stock = s;

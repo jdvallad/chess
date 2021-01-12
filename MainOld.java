@@ -11,7 +11,7 @@ public class MainOld extends PApplet {
     String move = "";
     char[][] pieceBoard = new char[8][8];
     boolean firstDraw = true; //used to run code once on first pass of draw
-    chess board = new chess(); //handles logic of chess
+    Chess board = new Chess(); //handles logic of Chess
     SoundFile start;
     SoundFile end;
     SoundFile moveSound;
@@ -76,7 +76,7 @@ public class MainOld extends PApplet {
             start.play();
             setFromFEN(board.fen);
             tempImage = get();
-            //chess.println(Evaluation.evaluate(board));
+            //Chess.println(Evaluation.evaluate(board));
             firstDraw = false;
             return;
         }
@@ -89,10 +89,10 @@ public class MainOld extends PApplet {
                     threadRunning = false;
                     playSound(capture); //play the correct sound
                     setFromFEN(board.fen); //update GUI board from logical board fen.
-                    chess.println(Evaluation.evaluate(board));
-                   //  chess.println(Evaluation.endGame(board));
+                    Chess.println(Evaluation.evaluate(board));
+                   //  Chess.println(Evaluation.endGame(board));
                     if (board.gameOver) {// move made ends the game
-                        chess.print("\r\n" + board.result); //show game results (want to move out of console)
+                        Chess.print("\r\n" + board.result); //show game results (want to move out of console)
                         tintScreen(); //darkens the screen to show game over.
                         tempImage = get(); //updates tempImage
                     }

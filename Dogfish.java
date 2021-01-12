@@ -1,8 +1,8 @@
 import java.util.*;
 
 public class Dogfish {
-    public static float[] minimax(chess board, int depth, float alpha, float beta, boolean maximizingPlayer) {
-       // chess.println(depth);
+    public static float[] minimax(Chess board, int depth, float alpha, float beta, boolean maximizingPlayer) {
+       // Chess.println(depth);
         float[] result = new float[2];
         result[1] = depth;
         float res = Evaluation.evaluate(board);
@@ -13,10 +13,10 @@ public class Dogfish {
         }
         if (maximizingPlayer) {
             float maxEval = -5000;
-            ArrayList<chess> moves = new ArrayList<>();
+            ArrayList<Chess> moves = new ArrayList<>();
             for (String str : board.legalMoves)
                 moves.add(board.nextBoard(str));
-            for (chess temp : moves) {
+            for (Chess temp : moves) {
                 float eval = minimax(temp, depth - 1, alpha, beta, false)[0];
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
@@ -28,10 +28,10 @@ public class Dogfish {
             return result;
         } else {
             float minEval = 5000;
-            ArrayList<chess> moves = new ArrayList<>();
+            ArrayList<Chess> moves = new ArrayList<>();
             for (String str : board.legalMoves)
                 moves.add(board.nextBoard(str));
-            for (chess temp : moves) {
+            for (Chess temp : moves) {
                 float eval = minimax(temp, depth - 1, alpha, beta, true)[0];
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
@@ -44,7 +44,7 @@ public class Dogfish {
         }
     }
 
-    public static String[] ponder(chess board, int dw, float alpha, float beta) {
+    public static String[] ponder(Chess board, int dw, float alpha, float beta) {
         int depth = dw + 1;
         ArrayList<String> moves = new ArrayList<>(board.legalMoves);
         String[] result = new String[3];
