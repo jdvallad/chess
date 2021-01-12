@@ -1,6 +1,5 @@
 import processing.sound.SoundFile;
 
-import javax.swing.*;
 import java.util.*;
 
 public class GameScene extends Scene {
@@ -9,10 +8,8 @@ public class GameScene extends Scene {
     Chessboard board; //handles graphics of board
     Chess logic; //handles logic of Chess
     String move; //keeps track of current move
-    boolean threadRunning;
-    dogThread dog;
-    stockThread stock;
     Stockfish fish = new Stockfish();
+    Dogfish dog = new Dogfish();
     List<Button> buttons;
 
     public GameScene(SceneSwitcher app, String str, boolean bn) {
@@ -22,11 +19,10 @@ public class GameScene extends Scene {
     public void settings() {
         widthP = (float) screen.width / 1920f;
         heightP = (float) screen.height / 1080f;
-        threadRunning = false;
         move = "";
         logic = new Chess();//"K7/8/1q6/8/8/7k/8/8 b - - 0 1");
         board = new Chessboard(screen, Map.of(
-                "data", "meme", //datapack to use for images and sounds
+                "data", "lichess", //datapack to use for images and sounds
                 "fen", logic.fen, //fen of board, should match up with logical board
                 "perspective", "white", //from who's perspective to view the board
                 "staticPerspective", true //whether or not perspective flips depending on who's turn it is
@@ -43,7 +39,10 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, screen.loadImage("./data/buttons/reset.png"), "reset", true, -50f, 50f, .8f) {
                     public void action() {
-                        reset();
+                        board.start.play();
+                        logic.reset();
+                        board.setFromFEN(logic.fen);
+                        snap();
                     }
                 });
         buttons.add(
@@ -57,13 +56,8 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, screen.loadImage("./data/buttons/forward.png"), "forward", true, -50f, -50f, .8f) {
                     public void action() {
-                        String temp = logic.rollForward();
-                        board.playSound(temp);
+                        board.playSound(logic.rollForward());
                         board.setFromFEN(logic.fen);
-                        if (temp.split("-")[0].equals("gameOver")) {
-                            board.tintScreen();
-                            snap();
-                        }
                         snap();
                     }
                 });
@@ -73,9 +67,9 @@ public class GameScene extends Scene {
 
                     public void action() {
                         if (theme.isPlaying())
-                            theme.pause();
+                            theme.stop();
                         else
-                            theme.play(1, .1f);
+                            theme.loop(1, .1f);
                     }
                 });
         buttons.add(
@@ -96,13 +90,11 @@ public class GameScene extends Scene {
             return;
         }
         refresh();
-        move = getMove(move, "human", "dog,1");
+        move = getMove(move, "human", "stock,7,20");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
         board.drawLastMove(logic.lastMove());
-
         if (move.length() == 4 && logic.legalMoves.contains(move)) {
-            threadRunning = false;
             String moveType = logic.moveType(move);
             board.playSound(moveType);
             logic.makeMove(move);
@@ -151,29 +143,11 @@ public class GameScene extends Scene {
     }
 
     public String dogMove(int depth) {
-        if (!threadRunning) {
-            dog = new dogThread(logic, depth);
-            dog.start();
-            threadRunning = true;
-        }
-        String[] res = dog.move();
-        if (!res[0].equals("")) {
-            return res[0];
-        } else
-            return new String[]{move, "", ""}[0];
+        return dog.move(logic, depth, move);
     }
 
     public String stockMove(int depth, int diff) {
-        if (!threadRunning) {
-            stock = new stockThread(logic, fish, depth, diff);
-            stock.start();
-            threadRunning = true;
-        }
-        String res = stock.move();
-        if (!res.equals(""))
-            return res;
-        else
-            return move;
+        return fish.move(logic, depth, diff, move);
     }
 
 
@@ -188,14 +162,6 @@ public class GameScene extends Scene {
 
     public void clear() {
         logic.clear();
-        board.setFromFEN(logic.fen);
-        snap();
-    }
-
-    public void reset() {
-        threadRunning = false;
-        board.start.play();
-        logic.reset();
         board.setFromFEN(logic.fen);
         snap();
     }

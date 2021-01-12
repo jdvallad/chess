@@ -1,6 +1,7 @@
 import java.util.*;
 
 public class Dogfish {
+    dogThread dog = new dogThread(null,2);
     public static float[] minimax(Chess board, int depth, float alpha, float beta, boolean maximizingPlayer) {
        // Chess.println(depth);
         float[] result = new float[2];
@@ -103,6 +104,18 @@ public class Dogfish {
             result[1] = "" + minEval;
             result[2] = "" + cDepth;
             return result;
+        }
+    }
+    public String move(Chess logic,int depth,String old){
+        if(!dog.running){
+            dog = new dogThread(logic, depth);
+            dog.start();
+        }
+        String[] res = dog.move();
+        if (!res[0].equals("")) {
+            return res[0];
+        } else {
+            return new String[]{old, "", ""}[0];
         }
     }
 }

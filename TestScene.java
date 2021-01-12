@@ -1,10 +1,6 @@
-import processing.sound.SoundFile;
-
 public class TestScene extends Scene {
     Button button;
-    int count = 10;
-    boolean flag = false;
-
+    int count = 3;
     public TestScene(SceneSwitcher app, String str, boolean bn) {
         super(app, str, bn);
     }

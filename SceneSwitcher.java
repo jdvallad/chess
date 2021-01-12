@@ -27,8 +27,8 @@ public class SceneSwitcher extends PApplet {
         widthP = (float) width / 1920f;
         heightP = (float) height / 1080f;
         sceneList = new ArrayList<>();
-        sceneList.add(new GameScene(this, "game", false));
-        sceneList.add(new TestScene(this, "testScene", true));
+        sceneList.add(new GameScene(this, "game", true));
+        sceneList.add(new TestScene(this, "testScene", false));
         for (Scene scn : sceneList)
             scn.settings();
     }

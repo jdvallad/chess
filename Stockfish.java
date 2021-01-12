@@ -6,7 +6,7 @@ import xyz.niflheim.stockfish.exceptions.StockfishInitException;
 
 public class Stockfish {
     StockfishClient client;
-
+    stockThread stock = new stockThread(null,null,0,0);
     public Stockfish() {
         try {
             client = new StockfishClient.Builder()
@@ -33,5 +33,18 @@ public class Stockfish {
             e.printStackTrace();
         }
         return "";
+    }
+
+    public String move(Chess logic,int depth,int difficulty,String old){
+        if(!stock.running){
+            stock = new stockThread(logic,this,depth,difficulty);
+            stock.start();
+        }
+        String res = stock.move();
+        if (!res.equals("")) {
+            return res;
+        } else {
+            return new String[]{old, "", ""}[0];
+        }
     }
 }
