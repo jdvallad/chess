@@ -71,25 +71,25 @@ public class Evaluation {
     };
 
     public static boolean endGame(Chess board) {
-        boolean whiteQueen = Chess.longToStrings(board.pieces("Q")).size() == 1;
-        boolean blackQueen = Chess.longToStrings(board.pieces("q")).size() == 1;
-        int pawnCount = Chess.longToStrings(board.pieces("p")).size()
-                + Chess.longToStrings(board.pieces("P")).size();
+        boolean whiteQueen = Chess.longToStrings(board.pieces('Q')).size() == 1;
+        boolean blackQueen = Chess.longToStrings(board.pieces('q')).size() == 1;
+        int pawnCount = Chess.longToStrings(board.pieces('p')).size()
+                + Chess.longToStrings(board.pieces('P')).size();
         if ((!(whiteQueen || blackQueen)) && pawnCount <=8)
             return true;
         if (whiteQueen) {
-            int minorPieceCount = Chess.longToStrings(board.pieces("B")).size()
-                    + Chess.longToStrings(board.pieces("N")).size();
-            int rookCount = Chess.longToStrings(board.pieces("R")).size();
+            int minorPieceCount = Chess.longToStrings(board.pieces('B')).size()
+                    + Chess.longToStrings(board.pieces('N')).size();
+            int rookCount = Chess.longToStrings(board.pieces('R')).size();
             if (rookCount != 0)
                 return false;
             if (minorPieceCount > 1)
                 return false;
         }
         if (blackQueen) {
-            int minorPieceCount = Chess.longToStrings(board.pieces("b")).size()
-                    + Chess.longToStrings(board.pieces("n")).size();
-            int rookCount = Chess.longToStrings(board.pieces("r")).size();
+            int minorPieceCount = Chess.longToStrings(board.pieces('b')).size()
+                    + Chess.longToStrings(board.pieces('n')).size();
+            int rookCount = Chess.longToStrings(board.pieces('r')).size();
             if (rookCount != 0)
                 return false;
             return minorPieceCount <= 1;

@@ -11,7 +11,6 @@ public class Chessboard {
     PApplet screen;
     PImage[] images;
     char[][] pieceBoard = new char[8][8];
-    boolean initialized = false; //used to run code once on first pass of draw
     SoundFile start;
     SoundFile end;
     SoundFile moveSound;
@@ -32,6 +31,7 @@ public class Chessboard {
         fen = (String) parameters.get("fen");
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
+        settings();
     }
 
     public Chessboard(PApplet p) {
@@ -40,6 +40,7 @@ public class Chessboard {
         fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = "white";
         staticPerspective = true;
+        settings();
     }
 
     public void setFromParameters(Map<String, Object> parameters) {
@@ -246,7 +247,7 @@ public class Chessboard {
         screen.rect(447 + 128 * x, 27 + 128 * y, 128, 128);
     }
 
-    public String startMoveOnMousePress(String m) {
+    public String startMoveOnMousePress(String m,boolean check) {
         if (mouseOnBoard() && screen.mouseButton == screen.LEFT) {
             String move = m;
             int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
@@ -257,7 +258,7 @@ public class Chessboard {
             }
             int yRank = 8 - y;
             char xFile = (char) (97 + x);
-            if (getPiece("" + xFile + yRank) != ' ')
+            if ((!check) || getPiece("" + xFile + yRank) != ' ')
                 move = "" + xFile + yRank;
             return move;
         }
@@ -285,8 +286,11 @@ public class Chessboard {
         }
     }
 
-    public void drawLastMove(String lastMove) {
+    public void drawLastMove(String lastMove)
+    {
         if (lastMove.length() == 0)
+            return;
+        if(lastMove.substring(0, 2).equals(lastMove.substring(2)))
             return;
         screen.fill(250, 247, 39, 30);
         screen.strokeWeight(0);
@@ -366,16 +370,43 @@ public class Chessboard {
         screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64 * widthP) / widthP, (screen.mouseY - 64 * heightP) / heightP, 128, 128);
     }
 
-    public Set<String> legalMovesFromPiece(String location, Set<String> legalMoves) {
-        Set<String> res = new HashSet<>();
-        for (String str : legalMoves) {
+    public void drawFloatingPiece(char piece) {
+        if (piece == ' ')
+            return;
+        screen.tint(180);
+        String name = "" + piece;
+        int temp = switch (name.toLowerCase()) {
+            case "q" -> 2;
+            case "r" -> 4;
+            case "b" -> 6;
+            case "n" -> 8;
+            case "p" -> 10;
+            case "k" -> 0;
+            default -> -1;
+        };
+        if (temp == -1) {
+            return;
+        }
+        int team;
+        if (Character.isUpperCase(name.charAt(0))) {
+            team = 0;
+        } else {
+            team = 1;
+        }
+        screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64 * widthP) / widthP, (screen.mouseY - 64 * heightP) / heightP, 128, 128);
+    }
+
+    public Set<Short> legalMovesFromPiece(String location, Set<Short> legalMoves) {
+        Set<Short> res = new HashSet<>();
+        for (short sh : legalMoves) {
+            String str = Chess.decodeMove(sh);
             if (str.substring(0, 2).equals(location))
-                res.add(str);
+                res.add(sh);
         }
         return res;
     }
 
-    public void drawLegalMovesFromPiece(String location, Set<String> legalMoves) {
+    public void drawLegalMovesFromPiece(String location, Set<Short> legalMoves) {
         if (location.equals("")) {
             int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
             int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
@@ -388,25 +419,26 @@ public class Chessboard {
             drawLegalMovesFromPiece("" + xFile + yRank, legalMoves);
             return;
         }
-        for (String str : legalMovesFromPiece(location,legalMoves)) {
-                int r1 = 8 - Integer.parseInt("" + str.charAt(3));
-                int c1 = convertFileToInt(str.charAt(2));
+        for (short sh : legalMovesFromPiece(location, legalMoves)) {
+            String str = Chess.decodeMove(sh);
+            int r1 = 8 - Integer.parseInt("" + str.charAt(3));
+            int c1 = convertFileToInt(str.charAt(2));
             int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
             int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
-                if (perspective.equals("black")) {
-                    r1 = 7 - r1;
-                    c1 = 7 - c1;
-                    x = 7 - x;
-                    y = 7 - y;
-                }
-                if (x == c1 && y == r1) {
-                    screen.fill(153, 255, 255, 30);
-                    screen.strokeWeight(0);
-                    screen.rect(447 + 128 * x, 27 + 128 * y, 128, 128);
-                }
-                screen.fill(30, 80);
+            if (perspective.equals("black")) {
+                r1 = 7 - r1;
+                c1 = 7 - c1;
+                x = 7 - x;
+                y = 7 - y;
+            }
+            if (x == c1 && y == r1) {
+                screen.fill(153, 255, 255, 30);
                 screen.strokeWeight(0);
-                screen.circle(64 + 447 + 128 * c1, 64 + 27 + 128 * r1, 50);
+                screen.rect(447 + 128 * x, 27 + 128 * y, 128, 128);
+            }
+            screen.fill(30, 80);
+            screen.strokeWeight(0);
+            screen.circle(64 + 447 + 128 * c1, 64 + 27 + 128 * r1, 50);
         }
     }
 

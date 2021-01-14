@@ -1,19 +1,55 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Chess {
 
-    /**
-     * Begin non-static class methods and variables.
-     */
 
-    Map<String, Long> pieces;
-    List<String> allMovesMade = new ArrayList<>();
+    //Begin Static ROWS and FILES
+    static final long AFILE = 72340172838076673L;
+    static final long BFILE = 144680345676153346L;
+    static final long CFILE = 289360691352306692L;
+    static final long DFILE = 578721382704613384L;
+    static final long EFILE = 1157442765409226768L;
+    static final long FFILE = 2314885530818453536L;
+    static final long GFILE = 4629771061636907072L;
+    static final long HFILE = -9187201950435737472L;
+    static final long ROW1 = -72057594037927936L;
+    static final long ROW2 = 71776119061217280L;
+    static final long ROW3 = 280375465082880L;
+    static final long ROW4 = 1095216660480L;
+    static final long ROW5 = 4278190080L;
+    static final long ROW6 = 16711680L;
+    static final long ROW7 = 65280L;
+    static final long ROW8 = 255L;
+
+    //Begin Piece Instances
+    long wP = 71776119061217280L;
+    long wR = -9151314442816847872L;
+    long wN = 4755801206503243776L;
+    long wB = 2594073385365405696L;
+    long wQ = 576460752303423488L;
+    long wK = 1152921504606846976L;
+    long bP = 65280L;
+    long bR = 129L;
+    long bN = 66L;
+    long bB = 36L;
+    long bQ = 8L;
+    long bK = 16L;
+
+
+    //Begin Move and FEN Lists
+    Set<Short> legalMoves = new HashSet<>();
+    Set<Short> psuedoLegalMoves = new HashSet<>();
+    List<Short> allMovesMade = new ArrayList<>();
+    List<Short> extraAllMovesMade = new ArrayList<>();
     List<String> fenList = new ArrayList<>();
-    List<String> extraAllMovesMade = new ArrayList<>();
     List<String> extraFenList = new ArrayList<>();
 
-    Set<String> legalMoves = new HashSet<>();
-    Set<String> psuedoLegalMoves = new HashSet<>();
+
+    //Begin additional class variables
     Boolean[] castleRights = new Boolean[4];
     String turn; //keeps track current turn, "white" or "black"
     String enPassant = ""; //keeps track of current en passant square.
@@ -23,219 +59,21 @@ public class Chess {
     boolean gameOver = false;
     String result = ""; //result to be shown when game ends.
 
-    /**
-     * constructs board with default fen value.
-     */
+
+    //Begin Constructors
     public Chess() {
         setFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
-    /**
-     * constructs board from given fen value.
-     */
     public Chess(String f) {
         setFromFEN(f);
     }
 
-    /**
-     * Shadow constructor used to avoid infinite recursion constructing legalMoves.
-     * Do not use without proper understanding.
-     */
     private Chess(String f, String shadow) {
         if (!shadow.equals("filler text"))
             shadowSetFromFEN(f);
     }
 
-    /**
-     * returns long representing piece given by input.
-     * e.g. "P" for white pawn. "n" for black knight, etc.
-     */
-    public long pieces(String s) {
-        return pieces.get(s);
-    }
-
-    /**
-     * See above.
-     */
-    public long pieces(char s) {
-        return pieces.get("" + s);
-    }
-
-    /**
-     * Sets all non-static variables to those represented by given fen.
-     */
-    public void setFromFEN(String f) {
-        pieces = pieces_initializer();
-        pieces.replaceAll((k, v) -> 0L);
-        String[] fen = f.split("/");
-        for (int i = 0; i < 7; i++) {
-            int index = 0;
-            for (char c : fen[i].toCharArray()) {
-                if (c >= '1' && c <= '8')
-                    index += Integer.parseInt("" + c);
-                else {
-                    pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 8 - i));
-                    index++;
-                }
-            }
-        }
-        String[] last = fen[7].split(" ");
-        int index = 0;
-        for (char c : last[0].toCharArray()) {
-            if (c >= '1' && c <= '8')
-                index += Integer.parseInt("" + c);
-            else {
-                pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 1));
-                index++;
-            }
-        }
-        if (last[1].equals("w"))
-            turn = "white";
-        else
-            turn = "black";
-        List<Character> temp = new ArrayList<>();
-        for (char c : last[2].toCharArray())
-            temp.add(c);
-        castleRights[0] = temp.contains('K');
-        castleRights[1] = temp.contains('Q');
-        castleRights[2] = temp.contains('k');
-        castleRights[3] = temp.contains('q');
-        if (!last[3].equals("-"))
-            enPassant = last[3];
-        else
-            enPassant = "";
-        halfMoveClock = Integer.parseInt(last[4]);
-        fullMoveNumber = Integer.parseInt(last[5]);
-        allMovesMade.clear();
-        fenList.clear();
-        this.fen = f;
-        fenList.add(this.fen);
-        psuedoLegalMoves = updatePsuedoLegalMoves();
-        legalMoves = updateLegalMoves();
-        gameOver = false;
-        result = "";
-        checkForGameOver();
-    }
-
-    /**
-     * Shadow function used to avoid infinite recursion when updating legalMoves.
-     * Do not use unless you understand how it works.
-     */
-    public void shadowSetFromFEN(String f) {
-        pieces = pieces_initializer();
-        pieces.replaceAll((k, v) -> 0L);
-        String[] fen = f.split("/");
-        for (int i = 0; i < 7; i++) {
-            int index = 0;
-            for (char c : fen[i].toCharArray()) {
-                if (c >= '1' && c <= '8')
-                    index += Integer.parseInt("" + c);
-                else {
-                    pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 8 - i));
-                    index++;
-                }
-            }
-        }
-        String[] last = fen[7].split(" ");
-        int index = 0;
-        for (char c : last[0].toCharArray()) {
-            if (c >= '1' && c <= '8')
-                index += Integer.parseInt("" + c);
-            else {
-                pieces.put("" + c, pieces.get("" + c) | board_builder(((char) (97 + index)), 1));
-                index++;
-            }
-        }
-        if (last[1].equals("w"))
-            turn = "white";
-        else
-            turn = "black";
-        List<Character> temp = new ArrayList<>();
-        for (char c : last[2].toCharArray())
-            temp.add(c);
-        castleRights[0] = temp.contains('K');
-        castleRights[1] = temp.contains('Q');
-        castleRights[2] = temp.contains('k');
-        castleRights[3] = temp.contains('q');
-        if (!last[3].equals("-"))
-            enPassant = last[3];
-        halfMoveClock = Integer.parseInt(last[4]);
-        fullMoveNumber = Integer.parseInt(last[5]);
-        allMovesMade.clear();
-        fenList.clear();
-        this.fen = f;
-    }
-
-    /**
-     * Checks to see if the game is over through 4 different means.
-     * Checkmate, stalemate, 50 move rule, or 5-fold repetition.
-     * If game is over, gameOver, legalMoves, and result are set accordingly.
-     */
-    public void checkForGameOver() {
-        if (legalMoves.size() == 0) {
-            gameOver = true;
-            if (inCheck()) {
-                result = (turn.equals("white")) ? "black wins!" : "white wins!";
-            } else {
-                gameOver = true;
-                result = "draw by statemate!";
-            }
-            return;
-        }
-        if (halfMoveClock == 50) {
-            gameOver = true;
-            result = "draw by 50 move rule!";
-            legalMoves.clear();
-            return;
-        }
-        int occurrences = Collections.frequency(shortenedFenList(), shortenedFen(fen));
-        if (occurrences >= 5) {
-            gameOver = true;
-            result = "draw by 5-fold repetition!";
-            legalMoves.clear();
-            return;
-        }
-        boolean whiteINS = false;
-        boolean blackINS = false;
-        int nw = Chess.longToStrings(pieces("N")).size();
-        int bw = Chess.longToStrings(pieces("B")).size();
-        int rw = Chess.longToStrings(pieces("R")).size();
-        int qw = Chess.longToStrings(pieces("Q")).size();
-        int pw = Chess.longToStrings(pieces("P")).size();
-        int nb = Chess.longToStrings(pieces("n")).size();
-        int bb = Chess.longToStrings(pieces("b")).size();
-        int rb = Chess.longToStrings(pieces("r")).size();
-        int qb = Chess.longToStrings(pieces("q")).size();
-        int pb = Chess.longToStrings(pieces("p")).size();
-        if (rw + qw + pw == 0)
-            whiteINS = true;
-        if (rb + qb + pb == 0)
-            blackINS = true;
-        if (whiteINS && blackINS) {
-            if ((nw + bw <= 1) && (nb + bb <= 1)) {
-                gameOver = true;
-                result = "draw by insufficient material!";
-                legalMoves.clear();
-                return;
-            }
-            if ((nw == 2) && bw == 0 && (nb + bb == 0)) {
-                gameOver = true;
-                result = "draw by insufficient material!";
-                legalMoves.clear();
-                return;
-            }
-            if ((nb == 2) && bb == 0 && (nw + bw == 0)) {
-                gameOver = true;
-                result = "draw by insufficient material!";
-                legalMoves.clear();
-            }
-        }
-    }
-
-    /**
-     * constructs board from input board with proper non-static variables.
-     * Differs from calling constructor with fen string of input board as fenList and moveList are carried over.
-     */
     public Chess(Chess temp) {
         extraAllMovesMade = new ArrayList<>(temp.extraAllMovesMade);
         psuedoLegalMoves = new HashSet<>(temp.psuedoLegalMoves);
@@ -245,7 +83,18 @@ public class Chess {
         castleRights = temp.castleRights.clone();
         fenList = new ArrayList<>(temp.fenList);
         fullMoveNumber = temp.fullMoveNumber;
-        pieces = new HashMap<>(temp.pieces);
+        wP = temp.wP;
+        wR = temp.wR;
+        wN = temp.wN;
+        wB = temp.wB;
+        wQ = temp.wQ;
+        wK = temp.wK;
+        bP = temp.bP;
+        bR = temp.bR;
+        bN = temp.bN;
+        bB = temp.bB;
+        bQ = temp.bQ;
+        bK = temp.bK;
         halfMoveClock = temp.halfMoveClock;
         enPassant = temp.enPassant;
         gameOver = temp.gameOver;
@@ -254,158 +103,63 @@ public class Chess {
         fen = temp.fen;
     }
 
-    /**
-     * returns new Chess as if input move had been made.
-     */
+
+    //Begin nextBoard Methods
     public Chess nextBoard(String move) {
         Chess temp = new Chess(this);
         temp.makeMove(move);
         return temp;
     }
 
-    /**
-     * returns modified fenList with halfMoveClock and turnCount removed.
-     * Used to tell if position is repeated.
-     */
-    private List<String> shortenedFenList() {
-        List<String> temp = new ArrayList<>();
-        for (String s : fenList) {
-            temp.add(shortenedFen(s));
-        }
+    private Chess simpleNextBoard(String move) {
+        Chess temp = new Chess(fen, "shadow");
+        temp.simpleMove(move);
         return temp;
     }
 
-    /**
-     * returns a modified fen given input with halfMoveClock and turnCount removed.
-     */
-    public String shortenedFen(String s) {
-        String[] str = s.split(" ");
-        return str[0] + " " + str[1] + " " + str[2] + " " + str[3];
+
+    //Begin Move Methods
+    public void makeMove(String m) {
+        simpleMove(m);
+        allMovesMade.add(Chess.encodeMove(m)); //add move made to allMovesMade
+        psuedoLegalMoves = updatePsuedoLegalMoves();
+        legalMoves = updateLegalMoves(); //update list of legal Moves
+        fenList.add(fen);
+        extraAllMovesMade.clear();
+        extraFenList.clear();
+        checkForGameOver();
     }
 
-    /**
-     * sets board to empty board on whites turn.
-     */
-    public void clear() {
-        setFromFEN("8/8/8/8/8/8/8/8 w - - 0 1");
+    public void simpleMove(String m) {
+        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
+        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
+        char to = pieceAt(move[1]); //gets char for captured piece.
+        // If no piece captured or capture is an en passant capture, will be ' '.
+
+        if (to != ' ')
+            andPiece(to, ~boardBuilder(move[1])); //if piece at destination square, removes it
+        andPiece(from, ~boardBuilder(move[0])); //deletes moving piece from origin square
+        orPiece(from, boardBuilder(move[1])); //puts moving piece on destination square
+
+        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
+
+        if (turn.equals("black"))
+            fullMoveNumber++; //increment fullMoveNumber
+
+        checkForCastleMove(m); //move rook to proper position if move is castling
+
+        checkForEnPassant(m); //capture pawn for en passant move
+
+        checkForPromotion(m); //promotes pawn if on first of eighth rank.
+
+        turn = (turn.equals("white")) ? "black" : "white"; //switch turn
+        fen = fen();
     }
 
-    /**
-     * draws a text visualisation of current board in console.
-     */
-    public void drawBoard() {
-        print("\r\n8 | ", "");
-        for (int k = 0; k < 64; k++) {
-            List<String> temp = new ArrayList<>();
-            for (String s : pieces.keySet()) {
-                if ((pieces(s) >>> k & 1) == 1L) {
-                    temp.add(s);
-                }
-            }
-            print(temp.size() == 1 ? temp.get(0) : "*", " ");
-            if ((k + 1) % 8 == 0 && (k != 63)) {
-                print("\r\n" + (7 - (k >>> 3)) + " | ", "");
-            }
-        }
-        print("\r\n  -----------------");
-        print("    a b c d e f g h");
+    public Short lastMove() {
+        return allMovesMade.size() == 0 ? 0 : allMovesMade.get(allMovesMade.size() - 1);
     }
 
-    /**
-     * returns the char representing the piece located at input square
-     * e.g. pieceAt("e1") = 'K'
-     */
-    public char pieceAt(String str) {
-        int one = (str.charAt(0) - 97) + 8 * (8 - Integer.parseInt("" + str.charAt(1)));
-        for (String key : pieces.keySet()) {
-            if (((pieces.get(key) >>> one & 1) == 1L)) {
-                return key.charAt(0);
-            }
-        }
-        return ' ';
-    }
-
-    /**
-     * returns last move if applicable, otherwise ""
-     */
-    public String lastMove() {
-        return allMovesMade.size() == 0 ? "" : allMovesMade.get(allMovesMade.size() - 1);
-    }
-
-    /**
-     * initializes the piece map with default values.
-     * Values are immediately overwritten in setFromFEN.
-     */
-    private static Map<String, Long> pieces_initializer() {
-        Map<String, Long> a = new HashMap<>();
-        a.put("P", 71776119061217280L);
-        a.put("R", -9151314442816847872L);
-        a.put("N", 4755801206503243776L);
-        a.put("B", 2594073385365405696L);
-        a.put("Q", 576460752303423488L);
-        a.put("K", 1152921504606846976L);
-        a.put("p", 65280L);
-        a.put("r", 129L);
-        a.put("n", 66L);
-        a.put("b", 36L);
-        a.put("q", 8L);
-        a.put("k", 16L);
-        return a;
-    }
-
-    /**
-     * updates list of PsuedoLegalMoves, which tracks all moves legal if check and checkmate are not considered.
-     */
-    private Set<String> updatePsuedoLegalMoves() {
-        Set<String> res = new HashSet<>();
-        res.addAll(legalPawnMoves(turn.equals("white") ? 'P' : 'p'));
-        res.addAll(legalRookMoves(turn.equals("white") ? 'R' : 'r'));
-        res.addAll(legalKnightMoves(turn.equals("white") ? 'N' : 'n'));
-        res.addAll(legalBishopMoves(turn.equals("white") ? 'B' : 'b'));
-        res.addAll(legalQueenMoves(turn.equals("white") ? 'Q' : 'q'));
-        res.addAll(legalKingMoves(turn.equals("white") ? 'K' : 'k'));
-        return res;
-    }
-
-    /**
-     * resets current board to fen from most recent call to setFromFEN.
-     */
-    public void reset() {
-        fen = fenList.get(0);
-        setFromFEN(fen);
-    }
-
-    /**
-     * given an input move, castling rights are updated if any were lost.
-     * This method is specifically called AFTER the move has been made.
-     */
-    public void updateCastleRights(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)};
-        char from = pieceAt(move[1]);
-        if (from == 'K') { //white king move
-            castleRights[0] = castleRights[1] = false;
-        }
-        if (from == 'k') { //black king move
-            castleRights[2] = castleRights[3] = false;
-        }
-        if (castleRights[0] && from == 'R' && move[0].equals("h1")) { //white kingside rook move
-            castleRights[0] = false;
-        }
-        if (castleRights[1] && from == 'R' && move[0].equals("a1")) { //white queenside rook move
-            castleRights[1] = false;
-        }
-        if (castleRights[2] && from == 'r' && move[0].equals("h8")) { //black kingside rook move
-            castleRights[2] = false;
-        }
-        if (castleRights[3] && from == 'r' && move[0].equals("a8")) { //black queenside rook move
-            castleRights[3] = false;
-        }
-    }
-
-    /**
-     * returns a string describing the type of move that was made
-     * order of descriptions is determined by precedence when playing sound for the move
-     */
     public String moveType(String move) {
         boolean capture = isCapture(move);
         boolean castle = false;
@@ -438,28 +192,128 @@ public class Chess {
         return res.substring(0, res.length() - 1);
     }
 
-    /**
-     * returns the fen representing the current board.
-     */
+
+    //Begin Piece Methods
+    public long pieces(char s) {
+        return switch (s) {
+            case 'P' -> wP;
+            case 'R' -> wR;
+            case 'N' -> wN;
+            case 'B' -> wB;
+            case 'Q' -> wQ;
+            case 'K' -> wK;
+            case 'p' -> bP;
+            case 'r' -> bR;
+            case 'n' -> bN;
+            case 'b' -> bB;
+            case 'q' -> bQ;
+            case 'k' -> bK;
+            default -> 0L;
+        };
+    }
+
+    public void putPiece(char c, long l) {
+        switch (c) {
+            case 'P' -> wP = l;
+            case 'R' -> wR = l;
+            case 'N' -> wN = l;
+            case 'B' -> wB = l;
+            case 'Q' -> wQ = l;
+            case 'K' -> wK = l;
+            case 'p' -> bP = l;
+            case 'r' -> bR = l;
+            case 'n' -> bN = l;
+            case 'b' -> bB = l;
+            case 'q' -> bQ = l;
+            case 'k' -> bK = l;
+        }
+    }
+
+    public void orPiece(char c, long l) {
+        switch (c) {
+            case 'P' -> wP |= l;
+            case 'R' -> wR |= l;
+            case 'N' -> wN |= l;
+            case 'B' -> wB |= l;
+            case 'Q' -> wQ |= l;
+            case 'K' -> wK |= l;
+            case 'p' -> bP |= l;
+            case 'r' -> bR |= l;
+            case 'n' -> bN |= l;
+            case 'b' -> bB |= l;
+            case 'q' -> bQ |= l;
+            case 'k' -> bK |= l;
+        }
+    }
+
+    public void andPiece(char c, long l) {
+        switch (c) {
+            case 'P' -> wP &= l;
+            case 'R' -> wR &= l;
+            case 'N' -> wN &= l;
+            case 'B' -> wB &= l;
+            case 'Q' -> wQ &= l;
+            case 'K' -> wK &= l;
+            case 'p' -> bP &= l;
+            case 'r' -> bR &= l;
+            case 'n' -> bN &= l;
+            case 'b' -> bB &= l;
+            case 'q' -> bQ &= l;
+            case 'k' -> bK &= l;
+        }
+    }
+
+    public void resetPieces() {
+        wP = wR = wN = wB = wQ = wK = bP = bR = bN = bB = bQ = bK = 0L;
+    }
+
+    public char pieceAt(String str) {
+        print(str);
+        int one = (str.charAt(0) - 97) + 8 * (8 - Integer.parseInt("" + str.charAt(1)));
+        for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
+            if (((pieces(s) >>> one & 1) == 1L)) {
+                return s;
+            }
+        }
+        return ' ';
+    }
+
+    private void pieces_initializer() {
+        wP = 71776119061217280L;
+        wR = -9151314442816847872L;
+        wN = 4755801206503243776L;
+        wB = 2594073385365405696L;
+        wQ = 576460752303423488L;
+        wK = 1152921504606846976L;
+        bP = 65280L;
+        bR = 129L;
+        wN = 66L;
+        wB = 36L;
+        wQ = 8L;
+        wK = 16L;
+    }
+
+
+    //Begin FEN Methods
     private String fen() {
         StringBuilder res = new StringBuilder();
         for (int i = 0; i < 8; i++) {
             int count = 0;
             for (int c = 0; c < 8; c++) {
-                List<String> start = new ArrayList<>();
-                for (String p : pieces.keySet()) {
-                    if ((pieces(p) >>> (i * 8 + c) & 1) == 1L) {
-                        start.add(p);
+                char start = ' ';
+                for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
+                    if ((pieces(s) >>> (i * 8 + c) & 1) == 1L) {
+                        start = s;
                     }
                 }
-                if (start.size() == 0) {
+                if (start == ' ') {
                     count += 1;
                 } else {
                     if (count != 0) {
                         res.append(count);
                         count = 0;
                     }
-                    res.append(start.get(0));
+                    res.append(start);
                 }
             }
             if (count != 0) {
@@ -499,112 +353,276 @@ public class Chess {
         return res.toString();
     }
 
-    /**
-     * rolls board back to last position.
-     * Game can be played on from rolled back position.
-     * However, if done the ability to roll forward is lost.
-     */
-    public String rollback() {
-        if (fenList.size() == 1)
-            return "";
-        String temp = fenList.remove(fenList.size() - 1);
-        extraFenList.add(0, temp);
-        temp = allMovesMade.remove(allMovesMade.size() - 1);
-        extraAllMovesMade.add(0, temp);
-        List<String> tempFENList = new ArrayList<>(fenList);
-        List<String> tempAllMovesMade = new ArrayList<>(allMovesMade);
-        fen = fenList.get(fenList.size() - 1);
-        setFromFEN(fen);
-        fenList = tempFENList;
-        allMovesMade = tempAllMovesMade;
-        return moveType(temp);
+    public void setFromFEN(String f) {
+        resetPieces();
+        String[] fen = f.split("/");
+        for (int i = 0; i < 7; i++) {
+            int index = 0;
+            for (char c : fen[i].toCharArray()) {
+                if (c >= '1' && c <= '8')
+                    index += Integer.parseInt("" + c);
+                else {
+                    orPiece(c, boardBuilder(((char) (97 + index)), 8 - i));
+                    index++;
+                }
+            }
+        }
+        String[] last = fen[7].split(" ");
+        int index = 0;
+        for (char c : last[0].toCharArray()) {
+            if (c >= '1' && c <= '8')
+                index += Integer.parseInt("" + c);
+            else {
+                orPiece(c, boardBuilder(((char) (97 + index)), 1));
+                index++;
+            }
+        }
+        if (last[1].equals("w"))
+            turn = "white";
+        else
+            turn = "black";
+        List<Character> temp = new ArrayList<>();
+        for (char c : last[2].toCharArray())
+            temp.add(c);
+        castleRights[0] = temp.contains('K');
+        castleRights[1] = temp.contains('Q');
+        castleRights[2] = temp.contains('k');
+        castleRights[3] = temp.contains('q');
+        if (!last[3].equals("-"))
+            enPassant = last[3];
+        else
+            enPassant = "";
+        halfMoveClock = Integer.parseInt(last[4]);
+        fullMoveNumber = Integer.parseInt(last[5]);
+        allMovesMade.clear();
+        fenList.clear();
+        this.fen = f;
+        fenList.add(this.fen);
+        psuedoLegalMoves = updatePsuedoLegalMoves();
+        legalMoves = updateLegalMoves();
+        gameOver = false;
+        result = "";
+        checkForGameOver();
     }
 
-    /**
-     * if rolled back and move has not been made, this rolls the board as far as the game was played.
-     * If move has been made, this does nothing.
-     */
-    public String rollForward() {
-        if (extraFenList.size() == 0) {
-            return "";
+    public void shadowSetFromFEN(String f) {
+        resetPieces();
+        String[] fen = f.split("/");
+        for (int i = 0; i < 7; i++) {
+            int index = 0;
+            for (char c : fen[i].toCharArray()) {
+                if (c >= '1' && c <= '8')
+                    index += Integer.parseInt("" + c);
+                else {
+                    orPiece(c, boardBuilder(((char) (97 + index)), 8 - i));
+                    index++;
+                }
+            }
         }
-        String temp = extraFenList.remove(0);
-        fenList.add(temp);
-        temp = extraAllMovesMade.remove(0);
-        println(temp);
-        String res = moveType(temp);
-        allMovesMade.add(temp);
-        List<String> tempFENList = new ArrayList<>(fenList);
-        List<String> tempAllMovesMade = new ArrayList<>(allMovesMade);
-        fen = fenList.get(fenList.size() - 1);
-        setFromFEN(fen);
-        fenList = tempFENList;
-        allMovesMade = tempAllMovesMade;
+        String[] last = fen[7].split(" ");
+        int index = 0;
+        for (char c : last[0].toCharArray()) {
+            if (c >= '1' && c <= '8')
+                index += Integer.parseInt("" + c);
+            else {
+                orPiece(c, boardBuilder(((char) (97 + index)), 1));
+                index++;
+            }
+        }
+        if (last[1].equals("w"))
+            turn = "white";
+        else
+            turn = "black";
+        List<Character> temp = new ArrayList<>();
+        for (char c : last[2].toCharArray())
+            temp.add(c);
+        castleRights[0] = temp.contains('K');
+        castleRights[1] = temp.contains('Q');
+        castleRights[2] = temp.contains('k');
+        castleRights[3] = temp.contains('q');
+        if (!last[3].equals("-"))
+            enPassant = last[3];
+        enPassant = "";
+        halfMoveClock = Integer.parseInt(last[4]);
+        fullMoveNumber = Integer.parseInt(last[5]);
+        allMovesMade.clear();
+        fenList.clear();
+        this.fen = f;
+    }
+
+    private List<String> shortenedFenList() {
+        List<String> temp = new ArrayList<>();
+        for (String s : fenList) {
+            temp.add(shortenedFen(s));
+        }
+        return temp;
+    }
+
+    public String shortenedFen(String s) {
+        String[] str = s.split(" ");
+        return str[0] + " " + str[1] + " " + str[2] + " " + str[3];
+    }
+
+
+    //Begin Move List Update Methods
+    private Set<Short> updatePsuedoLegalMoves() {
+        Set<Short> res = new HashSet<>();
+        res.addAll(legalPawnMoves(turn.equals("white") ? 'P' : 'p'));
+        res.addAll(legalRookMoves(turn.equals("white") ? 'R' : 'r'));
+        res.addAll(legalKnightMoves(turn.equals("white") ? 'N' : 'n'));
+        res.addAll(legalBishopMoves(turn.equals("white") ? 'B' : 'b'));
+        res.addAll(legalQueenMoves(turn.equals("white") ? 'Q' : 'q'));
+        res.addAll(legalKingMoves(turn.equals("white") ? 'K' : 'k'));
         return res;
     }
 
-    /**
-     * rolls the game back n times, or as far as far back as the last set fen.
-     */
-    public String rollback(int n) {
-        for (int i = 0; i < n; i++)
-            rollback();
-        return "";
+    public Set<Short> updateLegalMoves() {
+        Set<Short> res = new HashSet<>();
+        for (short str : psuedoLegalMoves) {
+            if (!simpleNextBoard(Chess.decodeMove(str)).kingCanBeCaptured()) {
+                res.add(str);
+            }
+        }
+        turn = turn.equals("white") ? "black" : "white";
+        Set<Short> temp = updatePsuedoLegalMoves();
+        turn = turn.equals("white") ? "black" : "white";
+        for (Short sh : temp) {
+            String str = decodeMove(sh);
+            if (res.contains(Chess.encodeMove("e1g1")) && castleRights[0] && (str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck())) {
+                res.remove(Chess.encodeMove("e1g1"));
+            }
+            if (res.contains(encodeMove("e1c1")) && castleRights[1] && (str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck())) {
+                res.remove(encodeMove("e1c1"));
+            }
+            if (res.contains(encodeMove("e8g8")) && castleRights[2] && (str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck())) {
+                res.remove(encodeMove("e8g8"));
+            }
+            if (res.contains(encodeMove("e8c8")) && castleRights[3] && (str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck())) {
+                res.remove(encodeMove("e8c8"));
+            }
+        }
+        return res;
     }
 
-    /**
-     * rolls the game forward n times, or as far as forward as the game was played.
-     */
-    public String rollForward(int n) {
-        for (int i = 0; i < n; i++)
-            rollForward();
-        return "";
+
+    //Begin MakeMove Helpers
+    public void updateCastleRights(String m) {
+        String[] move = new String[]{m.substring(0, 2), m.substring(2)};
+        char from = pieceAt(move[1]);
+        if (from == 'K') { //white king move
+            castleRights[0] = castleRights[1] = false;
+        }
+        if (from == 'k') { //black king move
+            castleRights[2] = castleRights[3] = false;
+        }
+        if (castleRights[0] && from == 'R' && move[0].equals("h1")) { //white kingside rook move
+            castleRights[0] = false;
+        }
+        if (castleRights[1] && from == 'R' && move[0].equals("a1")) { //white queenside rook move
+            castleRights[1] = false;
+        }
+        if (castleRights[2] && from == 'r' && move[0].equals("h8")) { //black kingside rook move
+            castleRights[2] = false;
+        }
+        if (castleRights[3] && from == 'r' && move[0].equals("a8")) { //black queenside rook move
+            castleRights[3] = false;
+        }
     }
 
-    /**
-     * Checks if given move was a castle move. If so, moves associated rook to correct position.
-     * Also updates castle rights.
-     * Method specifically called AFTER move has been made.
-     */
+    public void checkForGameOver() {
+        if (legalMoves.size() == 0) {
+            gameOver = true;
+            if (inCheck()) {
+                result = (turn.equals("white")) ? "black wins!" : "white wins!";
+            } else {
+                gameOver = true;
+                result = "draw by statemate!";
+            }
+            return;
+        }
+        if (halfMoveClock == 50) {
+            gameOver = true;
+            result = "draw by 50 move rule!";
+            legalMoves.clear();
+            return;
+        }
+        int occurrences = Collections.frequency(shortenedFenList(), shortenedFen(fen));
+        if (occurrences >= 5) {
+            gameOver = true;
+            result = "draw by 5-fold repetition!";
+            legalMoves.clear();
+            return;
+        }
+        boolean whiteINS = false;
+        boolean blackINS = false;
+        int nw = Chess.longToStrings(pieces('N')).size();
+        int bw = Chess.longToStrings(pieces('B')).size();
+        int rw = Chess.longToStrings(pieces('R')).size();
+        int qw = Chess.longToStrings(pieces('Q')).size();
+        int pw = Chess.longToStrings(pieces('P')).size();
+        int nb = Chess.longToStrings(pieces('n')).size();
+        int bb = Chess.longToStrings(pieces('b')).size();
+        int rb = Chess.longToStrings(pieces('r')).size();
+        int qb = Chess.longToStrings(pieces('q')).size();
+        int pb = Chess.longToStrings(pieces('p')).size();
+        if (rw + qw + pw == 0)
+            whiteINS = true;
+        if (rb + qb + pb == 0)
+            blackINS = true;
+        if (whiteINS && blackINS) {
+            if ((nw + bw <= 1) && (nb + bb <= 1)) {
+                gameOver = true;
+                result = "draw by insufficient material!";
+                legalMoves.clear();
+                return;
+            }
+            if ((nw == 2) && bw == 0 && (nb + bb == 0)) {
+                gameOver = true;
+                result = "draw by insufficient material!";
+                legalMoves.clear();
+                return;
+            }
+            if ((nb == 2) && bb == 0 && (nw + bw == 0)) {
+                gameOver = true;
+                result = "draw by insufficient material!";
+                legalMoves.clear();
+            }
+        }
+    }
+
     public void checkForCastleMove(String m) {
         if (castleRights[0] && m.equals("e1g1")) {
-            pieces.put("R",
-                    pieces("R") & ~board_builder("h1")); //deletes rook from origin square
-            pieces.put("R", pieces("R") | board_builder("f1")); //puts rook on destination square
+            andPiece('R', 9223372036854775807L); //deletes rook from origin square
+            orPiece('R', 2305843009213693952L); //puts rook on destination square
         }
         if (castleRights[1] && m.equals("e1c1")) {
-            pieces.put("R", pieces("R") & ~board_builder("a1")); //deletes rook from origin square
-            pieces.put("R", pieces("R") | board_builder("d1")); //puts rook on destination square
+            andPiece('R', -72057594037927937L); //deletes rook from origin square
+            orPiece('R', boardBuilder("d1")); //puts rook on destination square
         }
         if (castleRights[2] && m.equals("e8g8")) {
-            pieces.put("r", pieces("r") & ~board_builder("h8")); //deletes rook from origin square
-            pieces.put("r", pieces("r") | board_builder("f8")); //puts rook on destination square
+            andPiece('R', ~boardBuilder("h8")); //deletes rook from origin square
+            orPiece('R', boardBuilder("f8")); //puts rook on destination square
         }
         if (castleRights[3] && m.equals("e8c8")) {
-            pieces.put("r", pieces("r") & ~board_builder("a8")); //deletes rook from origin square
-            pieces.put("r", pieces("r") | board_builder("d8")); //puts rook on destination square
+            andPiece('R', ~boardBuilder("a8")); //deletes rook from origin square
+            orPiece('R', boardBuilder("d8")); //puts rook on destination square
         }
         if (castleRights[0] || castleRights[1] || castleRights[2] || castleRights[3]) {
             updateCastleRights(m); //if any castling available, check for loss of castling rights
         }
     }
 
-    /**
-     * Checks if given move was an en passant capture. If so, captures associated pawn.
-     * Also updates enPassant.
-     * Method specifically called AFTER move has been made.
-     */
     public void checkForEnPassant(String m) {
         String[] move = new String[]{m.substring(0, 2), m.substring(2)};
         char from = pieceAt(move[1]);
         if (move[1].equals(enPassant)) {
             if (from == 'P') {
                 String temp = "" + move[1].charAt(0) + '5';
-                pieces.put("p", pieces('p') & ~board_builder(temp));
+                andPiece('p', ~boardBuilder(temp));
             }
             if (from == 'p') {
                 String temp = "" + move[1].charAt(0) + '4';
-                pieces.put("P", pieces('P') & ~board_builder(temp));
+                andPiece('P', ~boardBuilder(temp));
             }
         }
         enPassant = ""; //resets enPassant
@@ -616,28 +634,19 @@ public class Chess {
         }
     }
 
-    /**
-     * Checks if given move was a promotion. If so, promotes pawn to queen.
-     * Functionality to underpromote will be added at future date.
-     * Method specifically called AFTER move has been made.
-     */
     public void checkForPromotion(String m) {
         String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
         char from = pieceAt(move[1]); //gets char for destination piece.
         if (from == 'P' && move[1].charAt(1) == '8') {
-            pieces.put("P", pieces("P") & ~board_builder(move[1])); //deletes pawn from promotion square
-            pieces.put("Q", pieces("Q") | board_builder(move[1])); //puts queen on promotion square
+            andPiece('P', ~boardBuilder(move[1])); //deletes pawn from promotion square
+            orPiece('Q', boardBuilder(move[1])); //puts queen on promotion square
         }
         if (from == 'p' && move[1].charAt(1) == '1') {
-            pieces.put("p", pieces("p") & ~board_builder(move[1])); //deletes pawn from promotion square
-            pieces.put("q", pieces("q") | board_builder(move[1])); //puts queen on promotion square
+            andPiece('p', ~boardBuilder(move[1])); //deletes pawn from promotion square
+            orPiece('q', boardBuilder(move[1])); //puts queen on promotion square
         }
     }
 
-    /**
-     * update halfMoveClock given origin and destination square.
-     * Specifically called BEFORE move is made.
-     */
     public void setHalfMoveClock(char to, char from) {
         if (to != ' ')
             halfMoveClock = 0; //reset clock due to capture
@@ -647,179 +656,88 @@ public class Chess {
             halfMoveClock++; //reset clock due to pawn push
     }
 
-    /**
-     * Given input string for move, makes the move.
-     * All non-static variables are set accordingly.
-     */
-    public void makeMove(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
-        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
-        char to = pieceAt(move[1]); //gets char for captured piece.
-        // If no piece captured or capture is an en passant capture, will be ' '.
 
-        if (to != ' ')
-            pieces.put("" + to, pieces(to) & ~board_builder(move[1])); //if piece at destination square, removes it
-        pieces.put("" + from, pieces(from) & ~board_builder(move[0])); //deletes moving piece from origin square
-        pieces.put("" + from, pieces(from) | board_builder(move[1])); //puts moving piece on destination square
-
-        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
-
-        if (turn.equals("black"))
-            fullMoveNumber++; //increment fullMoveNumber
-
-        checkForCastleMove(m); //move rook to proper position if move is castling
-
-        checkForEnPassant(m); //capture pawn for en passant move
-
-        checkForPromotion(m); //promotes pawn if on first of eighth rank.
-
-        turn = (turn.equals("white")) ? "black" : "white"; //switch turn
-
-        allMovesMade.add(m); //add move made to allMovesMade
-        psuedoLegalMoves = updatePsuedoLegalMoves();
-        fen = fen();
-        legalMoves = updateLegalMoves(); //update list of legal Moves
-        fenList.add(fen);
-        extraAllMovesMade.clear();
-        extraFenList.clear();
-        checkForGameOver();
+    //Begin Board Modifier Methods
+    public void reset() {
+        fen = fenList.get(0);
+        setFromFEN(fen);
     }
 
-    /**
-     * Shadow method used to avoid infinite recursion when updating legalMoves.
-     * Do not use unless you understand.
-     */
-    public void shadowMakeMove(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
-        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
-        char to = pieceAt(move[1]); //gets char for captured piece.
-        // If no piece captured or capture is an en passant capture, will be ' '.
+    public void clear() {
+        setFromFEN("8/8/8/8/8/8/8/8 w - - 0 1");
+    }
 
+    public void putPiece(char piece, String square) {
+        char to = pieceAt(square);
         if (to != ' ')
-            pieces.put("" + to, pieces(to) & ~board_builder(move[1])); //if piece at destination square, removes it
-
-        pieces.put("" + from, pieces(from) & ~board_builder(move[0])); //deletes moving piece from origin square
-        pieces.put("" + from, pieces(from) | board_builder(move[1])); //puts moving piece on destination square
-
-        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
-
-        if (turn.equals("black"))
-            fullMoveNumber++; //increment fullMoveNumber
-
-        checkForCastleMove(m); //move rook to proper position if move is castling
-
-        checkForEnPassant(m); //capture pawn for en passant move
-
-        checkForPromotion(m);
-
-        turn = (turn.equals("white")) ? "black" : "white"; //switch turn
-
-        allMovesMade.add(m); //add move made to allMovesMade
+            andPiece(to, ~boardBuilder(square)); //if piece at destination square, removes it
+        if (piece != ' ')
+            orPiece(piece, boardBuilder(square)); //puts moving piece on destination square
         fen = fen();
     }
 
-    /**
-     * returns long representing all square occupied by white pieces.
-     */
+
+    //Begin Occupied Methods
     public Long whiteOccupied() {
         return pieces('P') | pieces('R') | pieces('N') | pieces('B') | pieces('Q') | pieces('K');
     }
 
-    /**
-     * returns long representing all squares occupied by black pieces.
-     */
     public Long blackOccupied() {
         return pieces('p') | pieces('r') | pieces('n') | pieces('b') | pieces('q') | pieces('k');
     }
 
-    /**
-     * returns long representing all squares occupied by any piece.
-     */
     public long occupied() {
         return whiteOccupied() | blackOccupied();
     }
 
-    /**
-     * returns list of legal knight moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'N' or 'n'
-     */
-    public List<String> legalKnightMoves(char c) {
-        List<String> res = new ArrayList<>();
+
+    // Begin Knight Methods
+    public List<Short> legalKnightMoves(char c) {
+        List<Short> res = new ArrayList<>();
         long notSameColorOccupied = Character.isUpperCase(c) ? ~whiteOccupied() : ~blackOccupied();
         for (String str : longToStrings(
                 nne(pieces(c)) & notSameColorOccupied
         )) {
-            res.add(ssw(str) + str);
+            res.add(Chess.encodeMove(ssw(str) + str));
         }
         for (String str : longToStrings(
                 nee(pieces(c)) & notSameColorOccupied)) {
-            res.add(sww(str) + str);
+            res.add(Chess.encodeMove(sww(str) + str));
         }
         for (String str : longToStrings(
                 nnw(pieces(c)) & notSameColorOccupied)) {
-            res.add(sse(str) + str);
+            res.add(Chess.encodeMove(sse(str) + str));
         }
         for (String str : longToStrings(
                 nww(pieces(c)) & notSameColorOccupied)) {
-            res.add(see(str) + str);
+            res.add(Chess.encodeMove(see(str) + str));
         }
         for (String str : longToStrings(
                 sse(pieces(c)) & notSameColorOccupied)) {
-            res.add(nnw(str) + str);
+            res.add(Chess.encodeMove(nnw(str) + str));
         }
         for (String str : longToStrings(
                 see(pieces(c)) & notSameColorOccupied)) {
-            res.add(nww(str) + str);
+            res.add(Chess.encodeMove(nww(str) + str));
         }
         for (String str : longToStrings(
                 ssw(pieces(c)) & notSameColorOccupied)) {
-            res.add(nne(str) + str);
+            res.add(Chess.encodeMove(nne(str) + str));
         }
         for (String str : longToStrings(
                 sww(pieces(c)) & notSameColorOccupied)) {
-            res.add(nee(str) + str);
+            res.add(Chess.encodeMove(nee(str) + str));
         }
         return res;
     }
 
-    /**
-     * returns list of legal pawn moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'P' or 'p'
-     */
-    public List<String> legalPawnMoves(char c) {
-        List<String> res = new ArrayList<>();
-        for (String str : longToStrings(
-                pawnsThatCanDoublePush(c))) {
-            res.add(str + (isWhite(c) ? n(n(str)) : s(s(str))));
-        }
-        for (String str : longToStrings(
-                pawnsThatCanPush(c))) {
-            res.add(str + (isWhite(c) ? n(str) : s(str)));
-        }
-        for (String str : longToStrings(
-                pawnsThatCanCaptureEast(c))) {
-            res.add(str + (isWhite(c) ? n(e(str)) : s(e(str))));
-        }
-        for (String str : longToStrings(
-                pawnsThatCanCaptureWest(c))) {
-            res.add(str + (isWhite(c) ? n(w(str)) : s(w(str))));
-        }
-        return res;
-    }
 
-    /**
-     * returns list of legal king moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'K' or 'k'
-     */
-    public List<String> legalKingMoves(char c) {
-        List<String> res = new ArrayList<>();
+    //Begin King Methods
+    public List<Short> legalKingMoves(char c) {
+        List<Short> res = new ArrayList<>();
         long king = pieces(c);
+        if (king == 0L)
+            return res;
         String kong = longToStrings(king).get(0);
         king |= n(king);
         king |= s(king);
@@ -827,173 +745,44 @@ public class Chess {
         king |= w(king);
         king &= isWhite(c) ? ~whiteOccupied() : ~blackOccupied();
         for (String str : longToStrings(king)) {
-            res.add(kong + str);
+            res.add(Chess.encodeMove(kong + str));
         }
         res.addAll(legalKingCastleMoves(c));
         return res;
     }
 
-    /**
-     * returns list of legal king castle moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'K' or 'k'
-     */
-    public List<String> legalKingCastleMoves(char c) {
-        List<String> res = new ArrayList<>();
+    public List<Short> legalKingCastleMoves(char c) {
+        List<Short> res = new ArrayList<>();
         long moves = 0L;
         long empty = ~occupied();
         if (isWhite(c)) {
             if (castleRights[0]) {
-                moves |= board_builder("g1") & e(empty);
+                moves |= boardBuilder("g1") & e(empty);
             }
             if (castleRights[1]) {
-                moves |= board_builder("c1") & w(empty) & e(empty);
+                moves |= boardBuilder("c1") & w(empty) & e(empty);
             }
         }
         if (isBlack(c)) {
             if (castleRights[2]) {
-                moves |= board_builder("g8") & e(empty);
+                moves |= boardBuilder("g8") & e(empty);
             }
             if (castleRights[3]) {
-                moves |= board_builder("c8") & w(empty) & e(empty);
+                moves |= boardBuilder("c8") & w(empty) & e(empty);
             }
         }
         for (String str : longToStrings(moves)) {
-            res.add((str.charAt(1) == '1' ? "e1" : "e8") + str);
+            res.add(Chess.encodeMove((str.charAt(1) == '1' ? "e1" : "e8") + str));
         }
         return res;
     }
 
-    /**
-     * returns list of legal bishop moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'B' or 'b'
-     */
-    public List<String> legalBishopMoves(char c) {
-        List<String> res = new ArrayList<>();
-        for (String str : longToStrings(pieces(c))) {
-            res.addAll(bishopSouthWestMoves(c, str));
-            res.addAll(bishopSouthEastMoves(c, str));
-            res.addAll(bishopNorthWestMoves(c, str));
-            res.addAll(bishopNorthEastMoves(c, str));
-        }
-        return res;
-    }
-
-    /**
-     * returns list of legal rook moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'R' or 'r'
-     */
-    public List<String> legalRookMoves(char c) {
-        List<String> res = new ArrayList<>();
-        for (String str : longToStrings(pieces(c))) {
-            res.addAll(rookNorthMoves(c, str));
-            res.addAll(rookSouthMoves(c, str));
-            res.addAll(rookEastMoves(c, str));
-            res.addAll(rookWestMoves(c, str));
-        }
-        return res;
-    }
-
-    /**
-     * returns list of legal queen moves given a piece color.
-     * Color of piece is specified by input char.
-     * It is recommended to input the char based on the actual piece as well.
-     * e.g. 'Q' or 'q'
-     */
-    public List<String> legalQueenMoves(char c) {
-        List<String> res = new ArrayList<>();
-        res.addAll(legalRookMoves(c));
-        res.addAll(legalBishopMoves(c));
-        return res;
-    }
-
-    /**
-     * returns list only containing legal moves given current board.
-     */
-    public Set<String> updateLegalMoves() {
-        Set<String> res = new HashSet<>();
-        for (String str : psuedoLegalMoves) {
-            if (!shadowNextBoard(str).kingCanBeCaptured()) {
-                res.add(str);
-            }
-        }
-        turn = turn.equals("white") ? "black" : "white";
-        Set<String> temp = updatePsuedoLegalMoves();
-        turn = turn.equals("white") ? "black" : "white";
-        for (String str : temp) {
-            if (res.contains("e1g1") && castleRights[0] && (str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck())) {
-                res.remove("e1g1");
-            }
-            if (res.contains("e1c1") && castleRights[1] && (str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck())) {
-                res.remove("e1c1");
-            }
-            if (res.contains("e8g8") && castleRights[2] && (str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck())) {
-                res.remove("e8g8");
-            }
-            if (res.contains("e8c8") && castleRights[3] && (str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck())) {
-                res.remove("e8c8");
-            }
-        }
-        return res;
-    }
-
-    /**
-     * returns whether player to move is currently in check.
-     */
-    public boolean inCheck() {
-        char c = turn.equals("white") ? 'K' : 'k';
-        String king = longToStrings(pieces(c)).get(0);
-        turn = turn.equals("white") ? "black" : "white";
-        Set<String> temp = updatePsuedoLegalMoves();
-        turn = turn.equals("white") ? "black" : "white";
-        for (String str : temp) {
-            if (str.substring(2).equals(king)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Shadow board created to update legalMoves.
-     * For normal use, use nextBoard
-     */
-    private Chess shadowNextBoard(String move) {
-        Chess temp = new Chess(fen, "shadow");
-        temp.shadowMakeMove(move);
-        return temp;
-    }
-
-    /**
-     * returns whether input square is currently "in check".
-     * That is, if no move were made, the opponent could move a piece to that square.
-     */
-    public boolean squareWillBeAttacked(String square) {
-        turn = turn.equals("white") ? "black" : "white";
-        Set<String> temp = updatePsuedoLegalMoves();
-        turn = turn.equals("white") ? "black" : "white";
-        for (String str : temp) {
-            if (str.substring(2).equals(square)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * returns true any psuedo legal moves can capture the opposing king.
-     * Used to update legal moves.
-     */
     public boolean kingCanBeCaptured() {
         char c = turn.equals("white") ? 'k' : 'K';
         String king = longToStrings(pieces(c)).get(0);
-        Set<String> temp = updatePsuedoLegalMoves();
-        for (String str : temp) {
+        Set<Short> temp = updatePsuedoLegalMoves();
+        for (short sh : temp) {
+            String str = decodeMove(sh);
             if (str.substring(2).equals(king)) {
                 return true;
             }
@@ -1001,189 +790,42 @@ public class Chess {
         return false;
     }
 
-    /**
-     * Given a bishop c at square str, returns a list of all psuedolegal ne moves.
-     */
-    public List<String> bishopNorthEastMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!ne(temp).equals("-1")) && (pieceAt(ne(temp)) == ' ')) {
-            temp = ne(temp);
-            res.add(str + temp);
+
+    //Begin Pawn Methods
+    public List<Short> legalPawnMoves(char c) {
+        List<Short> res = new ArrayList<>();
+        for (String str : longToStrings(
+                pawnsThatCanDoublePush(c))) {
+            res.add(
+                    Chess.encodeMove(str + (isWhite(c) ? n(n(str)) : s(s(str))))
+            );
         }
-        if ((!ne(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp))))
-        ) {
-            temp = ne(temp);
-            res.add(str + temp);
+        for (String str : longToStrings(
+                pawnsThatCanPush(c))) {
+            res.add(Chess.encodeMove(str + (isWhite(c) ? n(str) : s(str))));
+        }
+        for (String str : longToStrings(
+                pawnsThatCanCaptureEast(c))) {
+            res.add(Chess.encodeMove(str + (isWhite(c) ? n(e(str)) : s(e(str)))));
+        }
+        for (String str : longToStrings(
+                pawnsThatCanCaptureWest(c))) {
+            res.add(Chess.encodeMove(str + (isWhite(c) ? n(w(str)) : s(w(str)))));
         }
         return res;
     }
 
-    /**
-     * See above for nw.
-     */
-    public List<String> bishopNorthWestMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!nw(temp).equals("-1")) && (pieceAt(nw(temp)) == ' ')) {
-            temp = nw(temp);
-            res.add(str + temp);
-        }
-        if ((!nw(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp))))
-        ) {
-            temp = nw(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * See above for se.
-     */
-    public List<String> bishopSouthEastMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!se(temp).equals("-1")) && (pieceAt(se(temp)) == ' ')) {
-            temp = se(temp);
-            res.add(str + temp);
-        }
-        if ((!se(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp))))
-        ) {
-            temp = se(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * See above for sw.
-     */
-    public List<String> bishopSouthWestMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!sw(temp).equals("-1")) && (pieceAt(sw(temp)) == ' ')) {
-            temp = sw(temp);
-            res.add(str + temp);
-        }
-        if ((!sw(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp))))
-        ) {
-            temp = sw(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * Given a rook c at square str, returns a list of all psuedolegal north moves.
-     */
-    public List<String> rookNorthMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!n(temp).equals("-1")) && (pieceAt(n(temp)) == ' ')) {
-            temp = n(temp);
-            res.add(str + temp);
-        }
-        if ((!n(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp))))
-        ) {
-            temp = n(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * See above for south.
-     */
-    public List<String> rookSouthMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!s(temp).equals("-1")) && (pieceAt(s(temp)) == ' ')) {
-            temp = s(temp);
-            res.add(str + temp);
-        }
-        if ((!s(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp))))
-        ) {
-            temp = s(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * See above for east.
-     */
-    public List<String> rookEastMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!e(temp).equals("-1")) && (pieceAt(e(temp)) == ' ')) {
-            temp = e(temp);
-            res.add(str + temp);
-        }
-        if ((!e(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp))))
-        ) {
-            temp = e(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * See above for west.
-     */
-    public List<String> rookWestMoves(char c, String str) {
-        List<String> res = new ArrayList<>();
-        String temp = str;
-        while ((!w(temp).equals("-1")) && (pieceAt(w(temp)) == ' ')) {
-            temp = w(temp);
-            res.add(str + temp);
-        }
-        if ((!w(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp))))
-        ) {
-            temp = w(temp);
-            res.add(str + temp);
-        }
-        return res;
-    }
-
-    /**
-     * returns whether input piece is white.
-     */
-    public boolean isWhite(char c) {
-        return Character.isUpperCase(c);
-    }
-
-    /**
-     * returns whether input piece is black.
-     */
-    public boolean isBlack(char c) {
-        return Character.isLowerCase(c);
-    }
-
-    /**
-     * returns long representing pawns with color given by c that can DOUBLE push.
-     */
     public long pawnsThatCanDoublePush(char c) {
         long empty = ~occupied();
         if (isWhite(c)) {
-            return pieces(c) & s(empty) & s(s(empty)) & fr(2);
+            return pieces(c) & s(empty) & s(s(empty)) & ROW2;
         }
         if (isBlack(c)) {
-            return pieces(c) & n(empty) & n(n(empty)) & fr(7);
+            return pieces(c) & n(empty) & n(n(empty)) & ROW7;
         }
         return 0L;
     }
 
-    /**
-     * returns long representing pawns with color given by c that can SINGLE push.
-     */
     public long pawnsThatCanPush(char c) {
         long empty = ~occupied();
         if (isWhite(c)) {
@@ -1195,11 +837,8 @@ public class Chess {
         return 0L;
     }
 
-    /**
-     * returns long representing pawns with color given by c that can capture west.
-     */
     public long pawnsThatCanCaptureWest(char c) {
-        long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
+        long ep = !enPassant.equals("") ? boardBuilder(enPassant) : 0;
         if (isWhite(c)) {
             return pieces(c) & se(blackOccupied() | ep);
         }
@@ -1209,11 +848,8 @@ public class Chess {
         return 0L;
     }
 
-    /**
-     * returns long representing pawns with color given by c that can capture east.
-     */
     public long pawnsThatCanCaptureEast(char c) {
-        long ep = !enPassant.equals("") ? board_builder(enPassant) : 0;
+        long ep = !enPassant.equals("") ? boardBuilder(enPassant) : 0;
         if (isWhite(c)) {
             return pieces(c) & sw(blackOccupied() | ep);
         }
@@ -1223,28 +859,256 @@ public class Chess {
         return 0L;
     }
 
-    /**
-     * returns whether input move would be a capture.
-     * Method must be called before move is made in order to return expected results.
-     * Now works with en passant captures.
-     */
-    public boolean isCapture(String s) {
-        return (pieceAt(s.substring(2)) != ' ') || (s.substring(2).equals(enPassant) && (Character.toLowerCase(pieceAt(s.substring(0, 2))) == 'p'));
+
+    //Begin Bishop Methods
+    public List<Short> legalBishopMoves(char c) {
+        List<Short> res = new ArrayList<>();
+        for (String str : longToStrings(pieces(c))) {
+            res.addAll(bishopSouthWestMoves(c, str));
+            res.addAll(bishopSouthEastMoves(c, str));
+            res.addAll(bishopNorthWestMoves(c, str));
+            res.addAll(bishopNorthEastMoves(c, str));
+        }
+        return res;
     }
 
-    /*
-      End non-static class methods and variables.
-     */
-     /*
-      Begin static class methods and variables.
-     */
+    public List<Short> bishopNorthEastMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!ne(temp).equals("-1")) && (pieceAt(ne(temp)) == ' ')) {
+            temp = ne(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!ne(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp))))
+        ) {
+            temp = ne(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> bishopNorthWestMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!nw(temp).equals("-1")) && (pieceAt(nw(temp)) == ' ')) {
+            temp = nw(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!nw(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp))))
+        ) {
+            temp = nw(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> bishopSouthEastMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!se(temp).equals("-1")) && (pieceAt(se(temp)) == ' ')) {
+            temp = se(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!se(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp))))
+        ) {
+            temp = se(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> bishopSouthWestMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!sw(temp).equals("-1")) && (pieceAt(sw(temp)) == ' ')) {
+            temp = sw(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!sw(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp))))
+        ) {
+            temp = sw(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
 
 
-    /**
-     * Sensible print method so I don't go insane.
-     * If one element, prints it with a linebreak.
-     * Otherwise, prints all elements with spaces in between and NO linebreak.
-     */
+    //Begin Rook Methods
+    public List<Short> legalRookMoves(char c) {
+        List<Short> res = new ArrayList<>();
+        for (String str : longToStrings(pieces(c))) {
+            res.addAll(rookNorthMoves(c, str));
+            res.addAll(rookSouthMoves(c, str));
+            res.addAll(rookEastMoves(c, str));
+            res.addAll(rookWestMoves(c, str));
+        }
+        return res;
+    }
+
+    public List<Short> rookNorthMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!n(temp).equals("-1")) && (pieceAt(n(temp)) == ' ')) {
+            temp = n(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!n(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp))))
+        ) {
+            temp = n(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> rookSouthMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!s(temp).equals("-1")) && (pieceAt(s(temp)) == ' ')) {
+            temp = s(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!s(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp))))
+        ) {
+            temp = s(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> rookEastMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!e(temp).equals("-1")) && (pieceAt(e(temp)) == ' ')) {
+            temp = e(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!e(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp))))
+        ) {
+            temp = e(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+    public List<Short> rookWestMoves(char c, String str) {
+        List<Short> res = new ArrayList<>();
+        String temp = str;
+        while ((!w(temp).equals("-1")) && (pieceAt(w(temp)) == ' ')) {
+            temp = w(temp);
+            res.add(encodeMove(str + temp));
+        }
+        if ((!w(temp).equals("-1")) &&
+                (isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp))))
+        ) {
+            temp = w(temp);
+            res.add(encodeMove(str + temp));
+        }
+        return res;
+    }
+
+
+    //Begin Queen Methods
+    public List<Short> legalQueenMoves(char c) {
+        List<Short> res = new ArrayList<>();
+        res.addAll(legalRookMoves(c));
+        res.addAll(legalBishopMoves(c));
+        return res;
+    }
+
+
+    //Begin Boolean Methods
+    public boolean inCheck() {
+        char c = turn.equals("white") ? 'K' : 'k';
+        long l = pieces(c);
+        if (l == 0L)
+            return false;
+        String king = longToStrings(l).get(0);
+        turn = turn.equals("white") ? "black" : "white";
+        Set<Short> temp = updatePsuedoLegalMoves();
+        turn = turn.equals("white") ? "black" : "white";
+        for (short sh : temp) {
+            String str = decodeMove(sh);
+            if (str.substring(2).equals(king)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isWhite(char c) {
+        return Character.isUpperCase(c);
+    }
+
+    public boolean isBlack(char c) {
+        return Character.isLowerCase(c);
+    }
+
+    public boolean isCapture(String s) {
+        return (pieceAt(s.substring(2)) != ' ')
+                ||
+                (s.substring(2).equals(enPassant)
+                        &&
+                        (Character.toLowerCase(pieceAt(s.substring(0, 2))) == 'p')
+                );
+    }
+
+
+    //Begin Rolling Methods
+    public String rollback() {
+        if (fenList.size() == 1)
+            return "";
+        String temp = fenList.remove(fenList.size() - 1);
+        extraFenList.add(0, temp);
+        short sh = allMovesMade.remove(allMovesMade.size() - 1);
+        extraAllMovesMade.add(0, sh);
+        List<String> tempFENList = new ArrayList<>(fenList);
+        List<Short> tempAllMovesMade = new ArrayList<>(allMovesMade);
+        fen = fenList.get(fenList.size() - 1);
+        setFromFEN(fen);
+        fenList = tempFENList;
+        allMovesMade = tempAllMovesMade;
+        return moveType(decodeMove(sh));
+    }
+
+    public String rollForward() {
+        if (extraFenList.size() == 0) {
+            return "";
+        }
+        String temp = extraFenList.remove(0);
+        fenList.add(temp);
+        Short sh = extraAllMovesMade.remove(0);
+        String res = moveType(decodeMove(sh));
+        allMovesMade.add(sh);
+        List<String> tempFENList = new ArrayList<>(fenList);
+        List<Short> tempAllMovesMade = new ArrayList<>(allMovesMade);
+        fen = fenList.get(fenList.size() - 1);
+        setFromFEN(fen);
+        fenList = tempFENList;
+        allMovesMade = tempAllMovesMade;
+        return res;
+    }
+
+    public String rollback(int n) {
+        for (int i = 0; i < n; i++)
+            rollback();
+        return "";
+    }
+
+    public String rollForward(int n) {
+        for (int i = 0; i < n; i++)
+            rollForward();
+        return "";
+    }
+
+
+    //Begin Print Methods
     public static void print(Object... args) {
 
         if (args.length == 1) {
@@ -1258,9 +1122,6 @@ public class Chess {
         }
     }
 
-    /**
-     * Sensible print method that also prints a line.
-     */
     public static void println(Object... args) {
         System.out.print("\r\n");
         if (args.length == 1) {
@@ -1274,86 +1135,8 @@ public class Chess {
         }
     }
 
-    /**
-     * This stores all longs associated with files and ranks
-     * They are to be accessed through the accessor methods below.
-     */
-    private static final Map<String, Long> fr_temp = fr_initializer();
 
-    /**
-     * This initializes fr_temp with all the correct long values associated with each file and rank.
-     * Negated files and ranks are also stored.
-     */
-    private static Map<String, Long> fr_initializer() {
-        Map<String, Long> a = new HashMap<>();
-        for (char r : new char[]{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}) {
-            a.put("" + r, board_builder(r));
-            a.put("~" + r, ~board_builder(r));
-        }
-        for (int i = 1; i < 9; i++) {
-            a.put("" + i, board_builder(i));
-            a.put("-" + i, ~board_builder(i));
-        }
-        return a;
-    }
-
-    /**
-     * accessor method for getting files and ranks.
-     * If ~ or - are used for files or ranks respectully, the negated long will be returned.
-     */
-    public static long fr(Object a) {
-        return fr_temp.get("" + a);
-    }
-
-    /**
-     * returns union of all ranks or files listed in args.
-     */
-    public static long fr_or(Object... args) {
-        long res = 0;
-        for (Object o : args) {
-            res |= fr(o);
-        }
-        return res;
-    }
-
-    /**
-     * returns intersection of all ranks or files listed in args.
-     */
-    public static long fr_and(Object... args) {
-        long res = fr(args[0]);
-        for (Object o : args) {
-            res &= fr(o);
-        }
-        return res;
-    }
-
-    /**
-     * returns the rank of square at a if a is the index while looping over the board.
-     */
-    public static int rank(int a) {
-        return 8 - ((63 - a) >>> 3);
-    }
-
-    /**
-     * returns the file of square at a if a is the index while looping over the board.
-     */
-    public static char file(int a) {
-        return (char) (((63 - a) & 7) + 97);
-    }
-
-    /**
-     * returns the file and rank of square at a if a is the index while looping over the board.
-     */
-    public static String file_and_rank(int a) {
-        return "" + file(a) + rank(a);
-    }
-
-    /**
-     * Directional Methods that take string representations of squares and shift them in the given cardinal direction, from white's perspective.
-     * e.g. n("e2") = "e3"
-     * If return square is not on the board, "-1" is returned.
-     * If "-1" is input, "-1" is also returned.
-     */
+    //Begin Directional String Methods
     public static String n(String s) {
         if (s.equals("-1") || s.charAt(1) >= '8') {
             return "-1";
@@ -1398,7 +1181,6 @@ public class Chess {
         return s(w(a));
     }
 
-
     public static String nne(String a) {
         return n(ne(a));
     }
@@ -1431,30 +1213,22 @@ public class Chess {
         return sw(w(a));
     }
 
-    /*
-      End of Directional String methods.
-     */
 
-    /**
-     * Directional Methods that take long bitboards and shift them in the given cardinal direction, from white's perspective.
-     * Any bit that would shift off the board becomes a 0.
-     * There is no wrap around, so bits shifting off the board cannot be retrieved.
-     * A consequence of this is that n(s(a)) = a is not guaranteed.
-     */
+    //Begin Directional Long Methods
     public static long n(long a) {
-        return a >>> 8 & fr(-1);
+        return a >>> 8 & ~ROW1;
     }
 
     public static long s(long a) {
-        return a << 8 & fr(-8);
+        return a << 8 & ~ROW8;
     }
 
     public static long e(long a) {
-        return (a << 1) & fr("~a");
+        return (a << 1) & ~AFILE;
     }
 
     public static long w(long a) {
-        return (a >>> 1) & fr("~h");
+        return (a >>> 1) & ~HFILE;
     }
 
     public static long nw(long a) {
@@ -1472,7 +1246,6 @@ public class Chess {
     public static long sw(long a) {
         return s(w(a));
     }
-
 
     public static long nne(long a) {
         return n(ne(a));
@@ -1506,98 +1279,97 @@ public class Chess {
         return sw(w(a));
     }
 
-    /*
-      End of Directional Long methods.
-     */
 
-    /**
-     * Board builder methods that take in a rank,file, or both and returns a long representing it.
-     */
-    public static long board_builder(char a) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (file(i) == a) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
+    //Begin boardBuilder Methods
+    public static long boardBuilder(String a) {
+        return boardBuilder(stringToByte(a));
     }
 
-    public static long board_builder(String a) {
-        if (a.length() == 1) {
-            StringBuilder str = new StringBuilder();
-            for (int i = 0; i < 64; i++) {
-                if (("" + file(i)).equals(a)) {
-                    str.append('1');
-                } else {
-                    str.append('0');
-                }
-            }
-            return Long.parseUnsignedLong(str.toString(), 2);
-        }
-        assert (a.length() == 2);
-        char f = a.charAt(0);
-        int r = Integer.parseInt("" + a.charAt(1));
-        return board_builder(f, r);
+    public static long boardBuilder(char a, int b) {
+        return boardBuilder("" + a + b);
     }
 
-    public static long board_builder(int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
+    public static long boardBuilder(byte move) {
+        return 1L << (move);
     }
 
-    public static long board_builder(char a, int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (file(i) == a && rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
 
-    public static long board_builder(String a, int b) {
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < 64; i++) {
-            if (("" + file(i)).equals(a) && rank(i) == b) {
-                str.append('1');
-            } else {
-                str.append('0');
-            }
-        }
-        return Long.parseUnsignedLong(str.toString(), 2);
-    }
-
-    /*
-      End of Board builder methods.
-     */
-
-    /**
-     * Takes in a long representing a bitboard and converts it into a list of Strings representing all squares within the long.
-     */
     public static List<String> longToStrings(Long l) {
         List<String> res = new ArrayList<>();
-        for (int i = 63; i >= 0; i--) {
-            if ((l >>> i & 1) == 1L)
-                res.add(file_and_rank(63 - i));
+        for (byte i = 0; i < 64; i++) {
+            if (((l >>> i) & 1L) == 1L)
+                res.add(byteToString(i));
         }
         return res;
     }
 
-    /**
-     * prints the bitboard represented by the long in order to visualize it.
-     */
+
+    //Begin Decoding Methods
+    public static String decodeMove(short move) {
+        String destination = Chess.byteToString((byte) (63 & (move >>> 10)));
+        String origin = Chess.byteToString((byte) (63 & (move >>> 4)));
+        return origin + destination;
+    }
+
+    public static byte[] decodeMoveYEYE(short move) {
+        byte[] res = new byte[4];
+        res[0] = (byte) (63 & (move >>> 10));
+        res[1] = (byte) (63 & (move >>> 4));
+        res[2] = (byte) (63 & (move >>> 2));
+        res[3] = (byte) (63 & move);
+        return res;
+    }
+
+    public static String byteToString(byte b) {
+        return "" + ((char) (((b) & 7) + 97)) + (8 - (b >>> 3));
+    }
+
+    public static int rank(byte a) {
+        return 8 - ((63 - a) >>> 3);
+    }
+
+    public static char file(byte a) {
+        return (char) (((63 - a) & 7) + 97);
+    }
+
+
+    //Begin Encoding Methods
+    public static short encodeMove(byte destination, byte origin, byte promotion, byte flag) {
+        return (short) ((destination << 10) | (origin << 4) | (promotion << 2) | flag);
+    }
+
+    public static short encodeMove(String move) {
+        byte origin = Chess.stringToByte(move.substring(0, 2));
+        byte destination = Chess.stringToByte(move.substring(2));
+        byte promotion = 0;
+        byte flag = 0;
+        return encodeMove(destination, origin, promotion, flag);
+    }
+
+    public static byte stringToByte(String str) {
+        return (byte) (351 + str.charAt(0) - 8 * str.charAt(1));
+    }
+
+
+    //Begin Visualisation Methods
+    public void drawBoard() {
+        print("\r\n8 | ", "");
+        for (int k = 0; k < 64; k++) {
+            char temp = ' ';
+            for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
+                if ((pieces(s) >>> k & 1) == 1L) {
+                    temp = s;
+                }
+            }
+            print(temp != ' ' ? temp : "*", " ");
+            if ((k + 1) % 8 == 0 && (k != 63)) {
+                print("\r\n" + (7 - (k >>> 3)) + " | ", "");
+            }
+        }
+        print("\r\n  -----------------");
+        print("    a b c d e f g h");
+    }
+
     public static void print_bitboard(long a) {
         System.out.print("8 | ");
         for (int i = 0; i < 64; i++) {
@@ -1611,7 +1383,4 @@ public class Chess {
         System.out.println("    a b c d e f g h");
     }
 
-    /*
-      End static class methods and variables.
-     */
 }

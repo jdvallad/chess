@@ -15,8 +15,8 @@ public class Dogfish {
         if (maximizingPlayer) {
             float maxEval = -5000;
             ArrayList<Chess> moves = new ArrayList<>();
-            for (String str : board.legalMoves)
-                moves.add(board.nextBoard(str));
+            for (short sh: board.legalMoves)
+                moves.add(board.nextBoard(Chess.decodeMove(sh)));
             for (Chess temp : moves) {
                 float eval = minimax(temp, depth - 1, alpha, beta, false)[0];
                 maxEval = Math.max(maxEval, eval);
@@ -30,8 +30,8 @@ public class Dogfish {
         } else {
             float minEval = 5000;
             ArrayList<Chess> moves = new ArrayList<>();
-            for (String str : board.legalMoves)
-                moves.add(board.nextBoard(str));
+            for (short sh : board.legalMoves)
+                moves.add(board.nextBoard(Chess.decodeMove(sh)));
             for (Chess temp : moves) {
                 float eval = minimax(temp, depth - 1, alpha, beta, true)[0];
                 minEval = Math.min(minEval, eval);
@@ -47,7 +47,7 @@ public class Dogfish {
 
     public static String[] ponder(Chess board, int dw, float alpha, float beta) {
         int depth = dw + 1;
-        ArrayList<String> moves = new ArrayList<>(board.legalMoves);
+        ArrayList<Short> moves = new ArrayList<>(board.legalMoves);
         String[] result = new String[3];
         if (moves.size() == 0) {
             result[0] = "game";
@@ -57,7 +57,7 @@ public class Dogfish {
         }
         if (depth == 1) {
             Collections.shuffle(moves);
-            result[0] = moves.get(0);
+            result[0] = Chess.decodeMove(moves.get(0));
             result[1] = "" + Evaluation.evaluate(board.nextBoard(result[0]));
             result[2] = "0";
             return result;
@@ -67,7 +67,7 @@ public class Dogfish {
             int index = 0;
             float cDepth = 0;
             for (int i = 0; i < moves.size(); i++) {
-                String temp1 = moves.get(i);
+                String temp1 = Chess.decodeMove(moves.get(i));
                 float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, false);
                 if (eval[0] >= maxEval) {
                     maxEval = eval[0];
@@ -79,7 +79,7 @@ public class Dogfish {
                     break;
                 }
             }
-            result[0] = moves.get(index);
+            result[0] = Chess.decodeMove(moves.get(index));
             result[1] = "" + maxEval;
             result[2] = "" + cDepth;
             return result;
@@ -88,7 +88,7 @@ public class Dogfish {
             int index = 0;
             float cDepth = 0;
             for (int i = 0; i < moves.size(); i++) {
-                String temp1 = moves.get(i);
+                String temp1 = Chess.decodeMove(moves.get(i));
                 float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, true);
                 if (eval[0] <= minEval) {
                     minEval = eval[0];
@@ -100,7 +100,7 @@ public class Dogfish {
                     break;
                 }
             }
-            result[0] = moves.get(index);
+            result[0] = Chess.decodeMove(moves.get(index));
             result[1] = "" + minEval;
             result[2] = "" + cDepth;
             return result;

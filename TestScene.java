@@ -10,7 +10,7 @@ public class TestScene extends Scene {
     }
 
     public void settings() {
-        button = new Button(screen, screen.loadImage("./data/buttons/click.png"), "testButton", true, 800, 800) {
+        button = new Button(screen, "testButton", true, 800, 800, screen.loadImage("./data/buttons/click.png")) {
             public void action() {
                 count--;
                 Chess.println("Starting in  " + count + "...");

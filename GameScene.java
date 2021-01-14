@@ -27,17 +27,16 @@ public class GameScene extends Scene {
                 "perspective", "white", //from who's perspective to view the board
                 "staticPerspective", true //whether or not perspective flips depending on who's turn it is
         ));
-        board.settings();
         buttons = new ArrayList<>();
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/flip.png"), "flip", true, 50f, 50f, .8f) {
+                new Button(screen, "flip", true, 50f, 50f, .8f, screen.loadImage("./data/buttons/flip.png")) {
                     public void action() {
                         board.flipBoard();
                         snap();
                     }
                 });
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/reset.png"), "reset", true, -50f, 50f, .8f) {
+                new Button(screen, "reset", true, -50f, 50f, .8f, screen.loadImage("./data/buttons/reset.png")) {
                     public void action() {
                         board.start.play();
                         logic.reset();
@@ -46,7 +45,7 @@ public class GameScene extends Scene {
                     }
                 });
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/back.png"), "back", true, 50f, -50f, .8f) {
+                new Button(screen, "back", true, 50f, -50f, .8f, screen.loadImage("./data/buttons/back.png")) {
                     public void action() {
                         board.playSound(logic.rollback(2));
                         board.setFromFEN(logic.fen);
@@ -54,7 +53,7 @@ public class GameScene extends Scene {
                     }
                 });
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/forward.png"), "forward", true, -50f, -50f, .8f) {
+                new Button(screen, "forward", true, -50f, -50f, .8f, screen.loadImage("./data/buttons/forward.png")) {
                     public void action() {
                         board.playSound(logic.rollForward(2));
                         board.setFromFEN(logic.fen);
@@ -62,7 +61,7 @@ public class GameScene extends Scene {
                     }
                 });
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/tetris.png"), "tetris", true, 50f, 550f, .8f) {
+                new Button(screen, "tetris", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
                     final SoundFile theme = new SoundFile(screen, "./data/Tetris.mp3");
 
                     public void action() {
@@ -73,7 +72,7 @@ public class GameScene extends Scene {
                     }
                 });
         buttons.add(
-                new Button(screen, screen.loadImage("./data/buttons/exit.png"), "exit", true, -50f, 550f, .8f) {
+                new Button(screen, "exit", true, -50f, 550f, .8f, screen.loadImage("./data/buttons/exit.png")) {
 
                     public void action() {
                         screen.exit();
@@ -82,19 +81,19 @@ public class GameScene extends Scene {
     }
 
     public void draw() {
-        if (!board.initialized) {
+        if (!isInitialized()) {
             board.start.play();
             board.setFromFEN(logic.fen);
             snap();
-            board.initialized = true;
+            initialize();
             return;
         }
         refresh();
         move = getMove(move, "human", "stock,7,10");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
-        board.drawLastMove(logic.lastMove());
-        if (move.length() == 4 && logic.legalMoves.contains(move)) {
+        board.drawLastMove(Chess.decodeMove(logic.lastMove()));
+        if (move.length() == 4 && logic.legalMoves.contains(Chess.encodeMove(move))) {
             String moveType = logic.moveType(move);
             board.playSound(moveType);
             logic.makeMove(move);
@@ -152,10 +151,10 @@ public class GameScene extends Scene {
 
 
     public String randomMove() {
-        List<String> temp = new ArrayList<>(logic.legalMoves);
+        List<Short> temp = new ArrayList<>(logic.legalMoves);
         Collections.shuffle(temp);
         if (temp.size() != 0) {
-            return temp.get(0);
+            return Chess.decodeMove(temp.get(0));
         }
         return move;
     }
@@ -176,7 +175,7 @@ public class GameScene extends Scene {
                 move = "";
         }
         if (move.length() == 0)
-            move = board.startMoveOnMousePress(move);
+            move = board.startMoveOnMousePress(move,true);
     }
 
     public void mouseReleased() {

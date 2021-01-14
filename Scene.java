@@ -5,10 +5,13 @@ public abstract class Scene {
     private final String id;
     private boolean active;
     private PImage image;
+    private boolean initialized;
+
     public Scene(SceneSwitcher app, String str, boolean bn) {
         screen = app;
         id = str;
         active = bn;
+        initialized = false;
     }
 
     public String getId() {
@@ -30,12 +33,15 @@ public abstract class Scene {
     public boolean isActive() {
         return active;
     }
-    public void snap(){
+
+    public void snap() {
         image = screen.get();
     }
-    public void refresh(){
+
+    public void refresh() {
         screen.background(image);
     }
+
     public abstract void draw();
 
     public abstract void settings();
@@ -47,4 +53,12 @@ public abstract class Scene {
     public abstract void mousePressed();
 
     public abstract void mouseReleased();
+
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    public void initialize() {
+        initialized = true;
+    }
 }

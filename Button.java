@@ -1,9 +1,13 @@
 import processing.core.PApplet;
 import processing.core.PImage;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public abstract class Button {
     private final PApplet screen;
-    private final PImage image;
+    private final List<PImage> images;
     private final String id;
     private boolean active;
     private final float xPosition;
@@ -13,9 +17,9 @@ public abstract class Button {
     public int pressCount = -1;
     private final int delay = 2;
 
-    public Button(PApplet app, PImage img, String str, boolean bn, float x, float y, float w, float h) {
+    public Button(PApplet app, String str, boolean bn, float x, float y, float w, float h, PImage... img) {
         screen = app;
-        image = img;
+        images = new ArrayList<PImage>(Arrays.asList(img));
         id = str;
         active = bn;
         width = w;
@@ -30,12 +34,16 @@ public abstract class Button {
             yPosition = y;
     }
 
-    public Button(PApplet app, PImage img, String str, boolean bn, float x, float y, float m) {
-        this(app, img, str, bn, x, y, img.width * m, img.height * m);
+    public Button(PApplet app, String str, boolean bn, float x, float y, float w, float h, PImage img) {
+        this(app, str, bn, x, y, w, h, new PImage[]{img});
     }
 
-    public Button(PApplet app, PImage img, String str, boolean bn, float x, float y) {
-        this(app, img, str, bn, x, y, img.width, img.height);
+    public Button(PApplet app, String str, boolean bn, float x, float y, float m, PImage img) {
+        this(app, str, bn, x, y, img.width * m, img.height * m, img);
+    }
+
+    public Button(PApplet app, String str, boolean bn, float x, float y, PImage img) {
+        this(app, str, bn, x, y, img.width, img.height, img);
     }
 
     public String getId() {
@@ -100,7 +108,8 @@ public abstract class Button {
             }
             if (pressCount == 0)
                 screen.tint(255);
-            screen.image(image, xPosition, yPosition, width, height);
+            for (PImage image : images)
+                screen.image(image, xPosition, yPosition, width, height);
             if (pressCount != -1)
                 pressCount--;
         }
