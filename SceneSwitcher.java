@@ -4,11 +4,21 @@ import java.util.*;
 
 public class SceneSwitcher extends PApplet {
 
-    static public void mains(String[] passedArgs){
-        long a = Chess.ROW1 & Chess.DFILE;
-        a = ~a;
-        println(a+"L");
-        Chess.print_bitboard(a);
+    static public void mains(String[] passedArgs) {
+        Chess logic = new Chess("rnbqkbnr/1ppppppp/8/p7/4P3/8/PPPP1PPP/RNBQKBNR w KQkq a6 0 2");
+        logic.drawBoard();
+        System.out.println(Chess.pieceAt(logic.fen,"e2"));
+    }
+    public static void doIt(Chess board,int i){
+        HashMap<Short, Long> map = new HashMap<>();
+        board.Perft(i, true, map);
+        ArrayList<Short> list = new ArrayList<>(map.keySet());
+        list.sort(
+                Comparator.comparingLong(map::get)
+
+        );
+        for (short sh : list)
+            System.out.println(Chess.decodeMove(sh) + ": " + map.get(sh));
     }
     static public void main(String[] passedArgs) {
         com.sun.javafx.application.PlatformImpl.startup(() -> {

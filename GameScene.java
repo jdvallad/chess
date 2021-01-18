@@ -1,5 +1,4 @@
 import processing.sound.SoundFile;
-
 import java.util.*;
 
 public class GameScene extends Scene {
@@ -11,6 +10,7 @@ public class GameScene extends Scene {
     Stockfish fish = new Stockfish();
     Dogfish dog = new Dogfish();
     List<Button> buttons;
+    String game = "8/1Kn1p3/1p5N/4p1q1/4k1N1/3R2p1/Qn2B3/7R w - - 0 1";
 
     public GameScene(SceneSwitcher app, String str, boolean bn) {
         super(app, str, bn);
@@ -20,7 +20,7 @@ public class GameScene extends Scene {
         widthP = (float) screen.width / 1920f;
         heightP = (float) screen.height / 1080f;
         move = "";
-        logic = new Chess();//"K7/8/1q6/8/8/7k/8/8 b - - 0 1");
+        logic = new Chess(game);
         board = new Chessboard(screen, Map.of(
                 "data", "lichess", //datapack to use for images and sounds
                 "fen", logic.fen, //fen of board, should match up with logical board
@@ -39,8 +39,15 @@ public class GameScene extends Scene {
                 new Button(screen, "reset", true, -50f, 50f, .8f, screen.loadImage("./data/buttons/reset.png")) {
                     public void action() {
                         board.start.play();
+                        dog.dog = new dogThread(null, 2, null);
                         logic.reset();
                         board.setFromFEN(logic.fen);
+                        for (Button button : buttons) {
+                            if (button.getId().equals("result")) {
+                                button.deactivate();
+                                button.update();
+                            }
+                        }
                         snap();
                     }
                 });
@@ -49,6 +56,12 @@ public class GameScene extends Scene {
                     public void action() {
                         board.playSound(logic.rollback(2));
                         board.setFromFEN(logic.fen);
+                        for (Button button : buttons) {
+                            if (button.getId().equals("result")) {
+                                button.deactivate();
+                                button.update();
+                            }
+                        }
                         snap();
                     }
                 });
@@ -62,7 +75,7 @@ public class GameScene extends Scene {
                 });
         buttons.add(
                 new Button(screen, "tetris", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
-                    final SoundFile theme = new SoundFile(screen, "./data/Tetris.mp3");
+                    final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
 
                     public void action() {
                         if (theme.isPlaying())
@@ -89,41 +102,44 @@ public class GameScene extends Scene {
             return;
         }
         refresh();
-        move = getMove(move, "human", "stock,7,10");
+        move = getMove(move, "dog,3","human");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
         board.drawLastMove(Chess.decodeMove(logic.lastMove()));
-        if (move.length() == 4 && logic.legalMoves.contains(Chess.encodeMove(move))) {
-            String moveType = logic.moveType(move);
+        if (move.length() > 2 && logic.legalMoves.contains(logic.encodeMove(move))) {
+            String moveType = logic.moveType(logic.encodeMove(move));
             board.playSound(moveType);
-            logic.makeMove(move);
+            logic.makeMove(logic.encodeMove(move));
+            Chess.println("Score: "+Evaluation.evaluate(logic));
             move = "";
             board.setFromFEN(logic.fen);
             if (logic.inCheck())
                 board.showCheck();
-            snap();
             if (logic.gameOver) {
-                Chess.print("\r\n" + logic.result);
+                buttons.add(
+                        new Button(screen, "result", true, 755f, 435f, .8f, screen.loadImage("./data/results/" + logic.result + ".png")) {
+                            public void action() {
+                            }
+                        });
                 board.tintScreen();
-                snap();
+                for (Button button : buttons)
+                    button.update();
             }
+            snap();
         }
-        if (move.length() == 4) {
-            String to = move.substring(2);
-            if (board.legalMovesFromPiece(to, logic.legalMoves).size() != 0)
-                move = to;
+        if (move.length() > 2)
+            if (board.legalMovesFromPiece(move.substring(2), logic.legalMoves).size() != 0)
+                move = move.substring(2);
+
             else
                 move = "";
-        }
-
         for (Button button : buttons)
             button.update();
     }
-
     public String getMove(String move, String white, String black) {
         String[] w = white.replaceAll("\\s", "").split(",");
         String[] b = black.replaceAll("\\s", "").split(",");
-        if (logic.turn.equals("white")) {
+        if (logic.turn) {
             if (w[0].equals("stock"))
                 return stockMove(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
             if (w[0].equals("dog"))
@@ -142,11 +158,14 @@ public class GameScene extends Scene {
     }
 
     public String dogMove(int depth) {
-        return dog.move(logic, depth, move);
+        return dog.move(logic,depth, new ArrayList<>(logic.legalMoves)).getMove();
     }
 
     public String stockMove(int depth, int diff) {
-        return fish.move(logic, depth, diff, move);
+        String res = fish.move(logic, depth, diff, move);
+        if (res.equals(""))
+            return "";
+        return res;
     }
 
 
@@ -175,7 +194,9 @@ public class GameScene extends Scene {
                 move = "";
         }
         if (move.length() == 0)
-            move = board.startMoveOnMousePress(move,true);
+            move = board.startMoveOnMousePress(move, true);
+        if (move.length() == 4 && board.mouseOnBoard())
+            move = board.startMoveOnMousePress(move, true);
     }
 
     public void mouseReleased() {

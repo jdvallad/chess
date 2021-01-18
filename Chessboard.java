@@ -29,6 +29,8 @@ public class Chessboard {
         screen = app;
         data = (String) parameters.get("data");
         fen = (String) parameters.get("fen");
+        if(fen.equals(""))
+            fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
         settings();
@@ -46,6 +48,8 @@ public class Chessboard {
     public void setFromParameters(Map<String, Object> parameters) {
         data = (String) parameters.get("data");
         fen = (String) parameters.get("fen");
+        if(fen.equals(""))
+            fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
         setFromFEN(fen);

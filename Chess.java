@@ -1,27 +1,13 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-public class Chess {
+public class Chess implements Comparable<Chess> {
 
 
     //Begin Static ROWS and FILES
     static final long AFILE = 72340172838076673L;
-    static final long BFILE = 144680345676153346L;
-    static final long CFILE = 289360691352306692L;
-    static final long DFILE = 578721382704613384L;
-    static final long EFILE = 1157442765409226768L;
-    static final long FFILE = 2314885530818453536L;
-    static final long GFILE = 4629771061636907072L;
     static final long HFILE = -9187201950435737472L;
     static final long ROW1 = -72057594037927936L;
     static final long ROW2 = 71776119061217280L;
-    static final long ROW3 = 280375465082880L;
-    static final long ROW4 = 1095216660480L;
-    static final long ROW5 = 4278190080L;
-    static final long ROW6 = 16711680L;
     static final long ROW7 = 65280L;
     static final long ROW8 = 255L;
 
@@ -50,9 +36,12 @@ public class Chess {
 
 
     //Begin additional class variables
-    Boolean[] castleRights = new Boolean[4];
-    String turn; //keeps track current turn, "white" or "black"
-    String enPassant = ""; //keeps track of current en passant square.
+    boolean wKC = true;
+    boolean wQC = true;
+    boolean bKC = true;
+    boolean bQC = true;
+    boolean turn; //keeps track current turn, "white" or "black"
+    byte enPassant = -1; //keeps track of current en passant square.
     String fen; //stores fen of current board.
     int halfMoveClock; //keeps track of moves since last capture or pawn push.
     int fullMoveNumber;
@@ -66,12 +55,15 @@ public class Chess {
     }
 
     public Chess(String f) {
-        setFromFEN(f);
+        if (f.equals(""))
+            setFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        else
+            setFromFEN(f);
     }
 
     private Chess(String f, String shadow) {
         if (!shadow.equals("filler text"))
-            shadowSetFromFEN(f);
+            simpleSetFromFEN(f);
     }
 
     public Chess(Chess temp) {
@@ -80,7 +72,10 @@ public class Chess {
         extraFenList = new ArrayList<>(temp.extraFenList);
         allMovesMade = new ArrayList<>(temp.allMovesMade);
         legalMoves = new HashSet<>(temp.legalMoves);
-        castleRights = temp.castleRights.clone();
+        wKC = temp.wKC;
+        wQC = temp.wQC;
+        bKC = temp.bKC;
+        bQC = temp.bQC;
         fenList = new ArrayList<>(temp.fenList);
         fullMoveNumber = temp.fullMoveNumber;
         wP = temp.wP;
@@ -105,79 +100,135 @@ public class Chess {
 
 
     //Begin nextBoard Methods
-    public Chess nextBoard(String move) {
+    public Chess nextBoard(short move) {
         Chess temp = new Chess(this);
         temp.makeMove(move);
         return temp;
     }
 
-    private Chess simpleNextBoard(String move) {
-        Chess temp = new Chess(fen, "shadow");
-        temp.simpleMove(move);
-        return temp;
+    public int compareTo(Chess anotherChess) {
+        int runningTotal = 0;
+        if (fenList.size() != anotherChess.fenList.size())
+            return fenList.size() - anotherChess.fenList.size();
+        for (int i = 0; i < fenList.size(); i++)
+            runningTotal += fenList.get(i).compareTo(anotherChess.fenList.get(i));
+        return runningTotal;
     }
 
+    public boolean equals(Chess anotherChess) {
+        return compareTo(anotherChess) == 0;
+    }
 
     //Begin Move Methods
-    public void makeMove(String m) {
+    public void makeMove(short m) {
+        byte[] move = moveToByteArray(m);
+        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
+        char to = pieceAt(move[1]); //gets char for captured piece.
+        // If no piece captured or capture is an en passant capture, will be ' '.
+        enPassant = -1;
+        if (from == 'P' && 47 < move[0] && move[0] < 56 && 31 < move[1] && move[1] < 40)
+            enPassant = (byte) (move[1] + 8);
+        if (from == 'p' && 7 < move[0] && move[0] < 16 && 23 < move[1] && move[1] < 32)
+            enPassant = (byte) (move[1] - 8);
         simpleMove(m);
-        allMovesMade.add(Chess.encodeMove(m)); //add move made to allMovesMade
-        psuedoLegalMoves = updatePsuedoLegalMoves();
-        legalMoves = updateLegalMoves(); //update list of legal Moves
+        updateCastleRights(from, move[0]);
+        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
+        if (!turn)
+            fullMoveNumber++; //increment fullMoveNumber
+        switch (move[3]) {
+            case 1 -> castleMove(move[1]); //move rook to proper position if move is castling
+            case 2 -> enPassantMove(move[1]); //capture pawn for en passant move
+            case 3 -> promotionMove(move[1], move[2]); //promotes pawn if on first of eighth rank.
+        }
+        fen = fen();
+        allMovesMade.add(m); //add move made to allMovesMade
+        psuedoLegalMoves = getPsuedoLegalMoves();
+        legalMoves = getLegalMoves(); //update list of legal Moves
         fenList.add(fen);
         extraAllMovesMade.clear();
         extraFenList.clear();
         checkForGameOver();
     }
 
-    public void simpleMove(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
+    public void undo() {
+        fenList.remove(fenList.size() - 1);
+        allMovesMade.remove(allMovesMade.size() - 1);
+        simpleSetFromFEN(fenList.get(fenList.size() - 1));
+        psuedoLegalMoves = getPsuedoLegalMoves();
+        legalMoves = getLegalMoves(); //update list of legal Moves
+        gameOver = false;
+        result = "";
+        checkForGameOver();
+    }
+
+    public static char pieceAt(String fenString, String location) {
+        int x = location.charAt(0) - 97;
+        int y = 8 - Character.getNumericValue(location.charAt(1));
+        int stringIndex = 0;
+        int rowIndex = 0;
+        String row = (y != 7) ? fenString.split("/")[y] : fenString.split("/")[7].split(" ")[0];
+        while (rowIndex < x && stringIndex < row.length() - 1) {
+            if (Character.isDigit(row.charAt(stringIndex)))
+                rowIndex += Character.getNumericValue(row.charAt(stringIndex));
+            else
+                rowIndex++;
+            stringIndex++;
+        }
+        if (rowIndex == x && !Character.isDigit(row.charAt(stringIndex)))
+            return row.charAt(stringIndex);
+        return ' ';
+    }
+
+    public void simpleMove(short m) {
+        turn = !turn; //switch turn
+        byte[] move = moveToByteArray(m);
         char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
         char to = pieceAt(move[1]); //gets char for captured piece.
-        // If no piece captured or capture is an en passant capture, will be ' '.
-
         if (to != ' ')
             andPiece(to, ~boardBuilder(move[1])); //if piece at destination square, removes it
         andPiece(from, ~boardBuilder(move[0])); //deletes moving piece from origin square
         orPiece(from, boardBuilder(move[1])); //puts moving piece on destination square
+    }
 
-        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
-
-        if (turn.equals("black"))
-            fullMoveNumber++; //increment fullMoveNumber
-
-        checkForCastleMove(m); //move rook to proper position if move is castling
-
-        checkForEnPassant(m); //capture pawn for en passant move
-
-        checkForPromotion(m); //promotes pawn if on first of eighth rank.
-
-        turn = (turn.equals("white")) ? "black" : "white"; //switch turn
-        fen = fen();
+    public void updateCastleRights(char piece, byte move) {
+        if (piece == 'k') {
+            bKC = bQC = false;
+            return;
+        }
+        if (piece == 'K') {
+            wKC = wQC = false;
+            return;
+        }
+        if (piece == 'r' || piece == 'R') {
+            if (bKC && move == 7) {
+                bKC = false;
+                return;
+            }
+            if (bQC && move == 0) {
+                bQC = false;
+                return;
+            }
+            if (wKC && move == 63) {
+                wKC = false;
+                return;
+            }
+            if (wQC && move == 56) {
+                wQC = false;
+            }
+        }
     }
 
     public Short lastMove() {
         return allMovesMade.size() == 0 ? 0 : allMovesMade.get(allMovesMade.size() - 1);
     }
 
-    public String moveType(String move) {
-        boolean capture = isCapture(move);
-        boolean castle = false;
-        boolean promotion = false;
+    public String moveType(short s) {
+        byte[] move = moveToByteArray(s);
+        boolean capture = isCapture(s);
+        boolean castle = move[3] == 1;
+        boolean promotion = move[3] == 3;
         String res = "";
-        if (pieceAt(move.substring(0, 2)) == 'P' && move.charAt(3) == '8')
-            promotion = true;
-        if (pieceAt(move.substring(0, 2)) == 'p' && move.charAt(3) == '1')
-            promotion = true;
-        if (castleRights[0] && move.equals("e1g1"))
-            castle = true;
-        if (castleRights[1] && move.equals("e1c1"))
-            castle = true;
-        if (castleRights[2] && move.equals("e8g8"))
-            castle = true;
-        if (castleRights[3] && move.equals("e8c8"))
-            castle = true;
-        Chess shadow = nextBoard(move);
+        Chess shadow = nextBoard(s);
         if (shadow.gameOver)
             res += "gameOver-";
         if (shadow.inCheck())
@@ -267,13 +318,42 @@ public class Chess {
         wP = wR = wN = wB = wQ = wK = bP = bR = bN = bB = bQ = bK = 0L;
     }
 
-    public char pieceAt(String str) {
-        print(str);
-        int one = (str.charAt(0) - 97) + 8 * (8 - Integer.parseInt("" + str.charAt(1)));
-        for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
-            if (((pieces(s) >>> one & 1) == 1L)) {
-                return s;
-            }
+    public char pieceAt(byte str) {
+        if (((wP >>> str) & 1L) == 1L) {
+            return 'P';
+        }
+        if (((wR >>> str) & 1L) == 1L) {
+            return 'R';
+        }
+        if (((wN >>> str) & 1L) == 1L) {
+            return 'N';
+        }
+        if (((wB >>> str) & 1L) == 1L) {
+            return 'B';
+        }
+        if (((wQ >>> str) & 1L) == 1L) {
+            return 'Q';
+        }
+        if (((wK >>> str) & 1L) == 1L) {
+            return 'K';
+        }
+        if (((bP >>> str) & 1L) == 1L) {
+            return 'p';
+        }
+        if (((bR >>> str) & 1L) == 1L) {
+            return 'r';
+        }
+        if (((bN >>> str) & 1L) == 1L) {
+            return 'n';
+        }
+        if (((bB >>> str) & 1L) == 1L) {
+            return 'b';
+        }
+        if (((bQ >>> str) & 1L) == 1L) {
+            return 'q';
+        }
+        if (((bK >>> str) & 1L) == 1L) {
+            return 'k';
         }
         return ' ';
     }
@@ -323,89 +403,48 @@ public class Chess {
                 res.append("/");
             }
         }
-        res.append(turn.equals("white") ? " w " : " b ");
+        res.append(turn ? " w " : " b ");
         int count = 0;
-        if (castleRights[0]) {
+        if (wKC) {
             res.append("K");
             count++;
         }
-        if (castleRights[1]) {
+        if (wQC) {
             res.append("Q");
             count++;
         }
-        if (castleRights[2]) {
+        if (bKC) {
             res.append("k");
             count++;
         }
-        if (castleRights[3]) {
+        if (bQC) {
             res.append("q");
             count++;
         }
         if (count == 0) {
             res.append("-");
         }
-        if (enPassant.equals("")) {
+        if (enPassant == -1) {
             res.append(" -");
         } else {
-            res.append(" ").append(enPassant);
+            res.append(" ").append(byteToString(enPassant));
         }
         res.append(" ").append(halfMoveClock).append(" ").append(fullMoveNumber);
         return res.toString();
     }
 
     public void setFromFEN(String f) {
-        resetPieces();
-        String[] fen = f.split("/");
-        for (int i = 0; i < 7; i++) {
-            int index = 0;
-            for (char c : fen[i].toCharArray()) {
-                if (c >= '1' && c <= '8')
-                    index += Integer.parseInt("" + c);
-                else {
-                    orPiece(c, boardBuilder(((char) (97 + index)), 8 - i));
-                    index++;
-                }
-            }
-        }
-        String[] last = fen[7].split(" ");
-        int index = 0;
-        for (char c : last[0].toCharArray()) {
-            if (c >= '1' && c <= '8')
-                index += Integer.parseInt("" + c);
-            else {
-                orPiece(c, boardBuilder(((char) (97 + index)), 1));
-                index++;
-            }
-        }
-        if (last[1].equals("w"))
-            turn = "white";
-        else
-            turn = "black";
-        List<Character> temp = new ArrayList<>();
-        for (char c : last[2].toCharArray())
-            temp.add(c);
-        castleRights[0] = temp.contains('K');
-        castleRights[1] = temp.contains('Q');
-        castleRights[2] = temp.contains('k');
-        castleRights[3] = temp.contains('q');
-        if (!last[3].equals("-"))
-            enPassant = last[3];
-        else
-            enPassant = "";
-        halfMoveClock = Integer.parseInt(last[4]);
-        fullMoveNumber = Integer.parseInt(last[5]);
-        allMovesMade.clear();
+        simpleSetFromFEN(f);
         fenList.clear();
-        this.fen = f;
         fenList.add(this.fen);
-        psuedoLegalMoves = updatePsuedoLegalMoves();
-        legalMoves = updateLegalMoves();
+        psuedoLegalMoves = getPsuedoLegalMoves();
+        legalMoves = getLegalMoves();
         gameOver = false;
         result = "";
         checkForGameOver();
     }
 
-    public void shadowSetFromFEN(String f) {
+    public void simpleSetFromFEN(String f) {
         resetPieces();
         String[] fen = f.split("/");
         for (int i = 0; i < 7; i++) {
@@ -429,24 +468,22 @@ public class Chess {
                 index++;
             }
         }
-        if (last[1].equals("w"))
-            turn = "white";
-        else
-            turn = "black";
+        turn = last[1].equals("w");
         List<Character> temp = new ArrayList<>();
         for (char c : last[2].toCharArray())
             temp.add(c);
-        castleRights[0] = temp.contains('K');
-        castleRights[1] = temp.contains('Q');
-        castleRights[2] = temp.contains('k');
-        castleRights[3] = temp.contains('q');
+        wKC = temp.contains('K');
+        wQC = temp.contains('Q');
+        bKC = temp.contains('k');
+        bQC = temp.contains('q');
         if (!last[3].equals("-"))
-            enPassant = last[3];
-        enPassant = "";
+            enPassant = stringToByte(last[3]);
+        else
+            enPassant = -1;
         halfMoveClock = Integer.parseInt(last[4]);
         fullMoveNumber = Integer.parseInt(last[5]);
-        allMovesMade.clear();
-        fenList.clear();
+        extraAllMovesMade.clear();
+        extraFenList.clear();
         this.fen = f;
     }
 
@@ -465,78 +502,81 @@ public class Chess {
 
 
     //Begin Move List Update Methods
-    private Set<Short> updatePsuedoLegalMoves() {
+    public Set<Short> getPsuedoLegalMoves() {
         Set<Short> res = new HashSet<>();
-        res.addAll(legalPawnMoves(turn.equals("white") ? 'P' : 'p'));
-        res.addAll(legalRookMoves(turn.equals("white") ? 'R' : 'r'));
-        res.addAll(legalKnightMoves(turn.equals("white") ? 'N' : 'n'));
-        res.addAll(legalBishopMoves(turn.equals("white") ? 'B' : 'b'));
-        res.addAll(legalQueenMoves(turn.equals("white") ? 'Q' : 'q'));
-        res.addAll(legalKingMoves(turn.equals("white") ? 'K' : 'k'));
+        res.addAll(legalPawnMoves(turn ? 'P' : 'p'));
+        res.addAll(legalRookMoves(turn ? 'R' : 'r'));
+        res.addAll(legalKnightMoves(turn ? 'N' : 'n'));
+        res.addAll(legalBishopMoves(turn ? 'B' : 'b'));
+        res.addAll(legalQueenMoves(turn ? 'Q' : 'q'));
+        res.addAll(legalKingMoves(turn ? 'K' : 'k'));
         return res;
     }
 
-    public Set<Short> updateLegalMoves() {
+    public Set<Short> getLegalMoves() {
         Set<Short> res = new HashSet<>();
         for (short str : psuedoLegalMoves) {
-            if (!simpleNextBoard(Chess.decodeMove(str)).kingCanBeCaptured()) {
+            simpleMove(str);
+            if (!kingCanBeCaptured())
                 res.add(str);
-            }
+            simpleSetFromFEN(fen);
         }
-        turn = turn.equals("white") ? "black" : "white";
-        Set<Short> temp = updatePsuedoLegalMoves();
-        turn = turn.equals("white") ? "black" : "white";
+        boolean f1 = false, d1 = false, f8 = false, d8 = false;
+        turn = !turn;
+        Set<Short> temp = getPsuedoLegalMoves();
+        turn = !turn;
         for (Short sh : temp) {
-            String str = decodeMove(sh);
-            if (res.contains(Chess.encodeMove("e1g1")) && castleRights[0] && (str.substring(2).equals("g1") || str.substring(2).equals("f1") || inCheck())) {
-                res.remove(Chess.encodeMove("e1g1"));
-            }
-            if (res.contains(encodeMove("e1c1")) && castleRights[1] && (str.substring(2).equals("d1") || str.substring(2).equals("c1") || inCheck())) {
-                res.remove(encodeMove("e1c1"));
-            }
-            if (res.contains(encodeMove("e8g8")) && castleRights[2] && (str.substring(2).equals("g8") || str.substring(2).equals("f8") || inCheck())) {
-                res.remove(encodeMove("e8g8"));
-            }
-            if (res.contains(encodeMove("e8c8")) && castleRights[3] && (str.substring(2).equals("d8") || str.substring(2).equals("c8") || inCheck())) {
-                res.remove(encodeMove("e8c8"));
-            }
+            int destination = moveToByteArray(sh)[1];
+            if (destination == 61)
+                f1 = true;
+            if (destination == 59)
+                d1 = true;
+            if (destination == 5)
+                f8 = true;
+            if (destination == 3)
+                d8 = true;
+        }
+        if (wKC &&
+                (f1 || pieceAt((byte) 54) == 'p' || pieceAt((byte) 52) == 'p')) {
+            res.remove(encodeMove("e1g1q"));
+            res.remove(encodeMove("e1g1n"));
+            res.remove(encodeMove("e1g1r"));
+            res.remove(encodeMove("e1g1b"));
+        }
+        if (wQC &&
+                (d1 || pieceAt((byte) 52) == 'p' || pieceAt((byte) 50) == 'p')) {
+            res.remove(encodeMove("e1c1q"));
+            res.remove(encodeMove("e1c1n"));
+            res.remove(encodeMove("e1c1r"));
+            res.remove(encodeMove("e1c1b"));
+        }
+        if (bKC &&
+                (f8 || pieceAt((byte) 14) == 'P' || pieceAt((byte) 12) == 'P')) {
+            res.remove(encodeMove("e8g8q"));
+            res.remove(encodeMove("e8g8n"));
+            res.remove(encodeMove("e8g8r"));
+            res.remove(encodeMove("e8g8b"));
+        }
+        if (bQC &&
+                (d8 || pieceAt((byte) 12) == 'P' || pieceAt((byte) 10) == 'P')) {
+            res.remove(encodeMove("e8c8q"));
+            res.remove(encodeMove("e8c8n"));
+            res.remove(encodeMove("e8c8r"));
+            res.remove(encodeMove("e8c8b"));
         }
         return res;
     }
 
 
     //Begin MakeMove Helpers
-    public void updateCastleRights(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)};
-        char from = pieceAt(move[1]);
-        if (from == 'K') { //white king move
-            castleRights[0] = castleRights[1] = false;
-        }
-        if (from == 'k') { //black king move
-            castleRights[2] = castleRights[3] = false;
-        }
-        if (castleRights[0] && from == 'R' && move[0].equals("h1")) { //white kingside rook move
-            castleRights[0] = false;
-        }
-        if (castleRights[1] && from == 'R' && move[0].equals("a1")) { //white queenside rook move
-            castleRights[1] = false;
-        }
-        if (castleRights[2] && from == 'r' && move[0].equals("h8")) { //black kingside rook move
-            castleRights[2] = false;
-        }
-        if (castleRights[3] && from == 'r' && move[0].equals("a8")) { //black queenside rook move
-            castleRights[3] = false;
-        }
-    }
-
     public void checkForGameOver() {
         if (legalMoves.size() == 0) {
             gameOver = true;
             if (inCheck()) {
-                result = (turn.equals("white")) ? "black wins!" : "white wins!";
+                result = (turn) ? "black wins!" : "white wins!";
             } else {
                 gameOver = true;
-                result = "draw by statemate!";
+                result = "draw by stalemate!";
             }
             return;
         }
@@ -555,16 +595,16 @@ public class Chess {
         }
         boolean whiteINS = false;
         boolean blackINS = false;
-        int nw = Chess.longToStrings(pieces('N')).size();
-        int bw = Chess.longToStrings(pieces('B')).size();
-        int rw = Chess.longToStrings(pieces('R')).size();
-        int qw = Chess.longToStrings(pieces('Q')).size();
-        int pw = Chess.longToStrings(pieces('P')).size();
-        int nb = Chess.longToStrings(pieces('n')).size();
-        int bb = Chess.longToStrings(pieces('b')).size();
-        int rb = Chess.longToStrings(pieces('r')).size();
-        int qb = Chess.longToStrings(pieces('q')).size();
-        int pb = Chess.longToStrings(pieces('p')).size();
+        int nw = Chess.longToBytes(pieces('N')).size();
+        int bw = Chess.longToBytes(pieces('B')).size();
+        int rw = Chess.longToBytes(pieces('R')).size();
+        int qw = Chess.longToBytes(pieces('Q')).size();
+        int pw = Chess.longToBytes(pieces('P')).size();
+        int nb = Chess.longToBytes(pieces('n')).size();
+        int bb = Chess.longToBytes(pieces('b')).size();
+        int rb = Chess.longToBytes(pieces('r')).size();
+        int qb = Chess.longToBytes(pieces('q')).size();
+        int pb = Chess.longToBytes(pieces('p')).size();
         if (rw + qw + pw == 0)
             whiteINS = true;
         if (rb + qb + pb == 0)
@@ -590,60 +630,53 @@ public class Chess {
         }
     }
 
-    public void checkForCastleMove(String m) {
-        if (castleRights[0] && m.equals("e1g1")) {
+    public void castleMove(byte destination) {
+        if (destination == stringToByte("g1")) {
             andPiece('R', 9223372036854775807L); //deletes rook from origin square
             orPiece('R', 2305843009213693952L); //puts rook on destination square
+            wKC = false;
         }
-        if (castleRights[1] && m.equals("e1c1")) {
+        if (destination == stringToByte("c1")) {
             andPiece('R', -72057594037927937L); //deletes rook from origin square
             orPiece('R', boardBuilder("d1")); //puts rook on destination square
+            wQC = false;
         }
-        if (castleRights[2] && m.equals("e8g8")) {
-            andPiece('R', ~boardBuilder("h8")); //deletes rook from origin square
-            orPiece('R', boardBuilder("f8")); //puts rook on destination square
+        if (destination == stringToByte("g8")) {
+            andPiece('r', ~boardBuilder("h8")); //deletes rook from origin square
+            orPiece('r', boardBuilder("f8")); //puts rook on destination square
+            bKC = false;
         }
-        if (castleRights[3] && m.equals("e8c8")) {
-            andPiece('R', ~boardBuilder("a8")); //deletes rook from origin square
-            orPiece('R', boardBuilder("d8")); //puts rook on destination square
-        }
-        if (castleRights[0] || castleRights[1] || castleRights[2] || castleRights[3]) {
-            updateCastleRights(m); //if any castling available, check for loss of castling rights
-        }
-    }
-
-    public void checkForEnPassant(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)};
-        char from = pieceAt(move[1]);
-        if (move[1].equals(enPassant)) {
-            if (from == 'P') {
-                String temp = "" + move[1].charAt(0) + '5';
-                andPiece('p', ~boardBuilder(temp));
-            }
-            if (from == 'p') {
-                String temp = "" + move[1].charAt(0) + '4';
-                andPiece('P', ~boardBuilder(temp));
-            }
-        }
-        enPassant = ""; //resets enPassant
-        if (from == 'p' && move[0].charAt(1) == '7' && move[1].charAt(1) == '5') {
-            enPassant = "" + move[1].charAt(0) + '6'; //sets last enPassant if black pawn
-        }
-        if (from == 'P' && move[0].charAt(1) == '2' && move[1].charAt(1) == '4') {
-            enPassant = "" + move[1].charAt(0) + '3';  //sets last enPassant if white pawn
+        if (destination == stringToByte("c8")) {
+            andPiece('r', ~boardBuilder("a8")); //deletes rook from origin square
+            orPiece('r', boardBuilder("d8")); //puts rook on destination square
+            bQC = false;
         }
     }
 
-    public void checkForPromotion(String m) {
-        String[] move = new String[]{m.substring(0, 2), m.substring(2)}; //splits move into origin and destination squares
-        char from = pieceAt(move[1]); //gets char for destination piece.
-        if (from == 'P' && move[1].charAt(1) == '8') {
-            andPiece('P', ~boardBuilder(move[1])); //deletes pawn from promotion square
-            orPiece('Q', boardBuilder(move[1])); //puts queen on promotion square
-        }
-        if (from == 'p' && move[1].charAt(1) == '1') {
-            andPiece('p', ~boardBuilder(move[1])); //deletes pawn from promotion square
-            orPiece('q', boardBuilder(move[1])); //puts queen on promotion square
+    public void enPassantMove(byte destination) {
+        if (destination < 32)
+            andPiece('p', ~s(boardBuilder(destination)));
+        else
+            andPiece('P', ~n(boardBuilder(destination)));
+    }
+
+    public void promotionMove(byte destination, byte promote) {
+        if (destination < 32) {
+            andPiece('P', ~boardBuilder(destination));
+            switch (promote) {
+                case 0 -> orPiece('Q', boardBuilder(destination));
+                case 1 -> orPiece('N', boardBuilder(destination));
+                case 2 -> orPiece('R', boardBuilder(destination));
+                case 3 -> orPiece('B', boardBuilder(destination));
+            }
+        } else {
+            andPiece('p', ~boardBuilder(destination));
+            switch (promote) {
+                case 0 -> orPiece('q', boardBuilder(destination));
+                case 1 -> orPiece('n', boardBuilder(destination));
+                case 2 -> orPiece('r', boardBuilder(destination));
+                case 3 -> orPiece('b', boardBuilder(destination));
+            }
         }
     }
 
@@ -667,16 +700,6 @@ public class Chess {
         setFromFEN("8/8/8/8/8/8/8/8 w - - 0 1");
     }
 
-    public void putPiece(char piece, String square) {
-        char to = pieceAt(square);
-        if (to != ' ')
-            andPiece(to, ~boardBuilder(square)); //if piece at destination square, removes it
-        if (piece != ' ')
-            orPiece(piece, boardBuilder(square)); //puts moving piece on destination square
-        fen = fen();
-    }
-
-
     //Begin Occupied Methods
     public Long whiteOccupied() {
         return pieces('P') | pieces('R') | pieces('N') | pieces('B') | pieces('Q') | pieces('K');
@@ -695,39 +718,22 @@ public class Chess {
     public List<Short> legalKnightMoves(char c) {
         List<Short> res = new ArrayList<>();
         long notSameColorOccupied = Character.isUpperCase(c) ? ~whiteOccupied() : ~blackOccupied();
-        for (String str : longToStrings(
-                nne(pieces(c)) & notSameColorOccupied
-        )) {
-            res.add(Chess.encodeMove(ssw(str) + str));
-        }
-        for (String str : longToStrings(
-                nee(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(sww(str) + str));
-        }
-        for (String str : longToStrings(
-                nnw(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(sse(str) + str));
-        }
-        for (String str : longToStrings(
-                nww(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(see(str) + str));
-        }
-        for (String str : longToStrings(
-                sse(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(nnw(str) + str));
-        }
-        for (String str : longToStrings(
-                see(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(nww(str) + str));
-        }
-        for (String str : longToStrings(
-                ssw(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(nne(str) + str));
-        }
-        for (String str : longToStrings(
-                sww(pieces(c)) & notSameColorOccupied)) {
-            res.add(Chess.encodeMove(nee(str) + str));
-        }
+        for (byte str : longToBytes(nne(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(ssw(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(nee(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(sww(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(nnw(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(sse(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(nww(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(see(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(sse(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(nnw(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(see(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(nww(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(ssw(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(nne(str), str, (byte) 0, (byte) 0));
+        for (byte str : longToBytes(sww(pieces(c)) & notSameColorOccupied))
+            res.add(Chess.encodeMove(nee(str), str, (byte) 0, (byte) 0));
         return res;
     }
 
@@ -738,15 +744,14 @@ public class Chess {
         long king = pieces(c);
         if (king == 0L)
             return res;
-        String kong = longToStrings(king).get(0);
+        byte kong = longToBytes(king).get(0);
         king |= n(king);
         king |= s(king);
         king |= e(king);
         king |= w(king);
         king &= isWhite(c) ? ~whiteOccupied() : ~blackOccupied();
-        for (String str : longToStrings(king)) {
-            res.add(Chess.encodeMove(kong + str));
-        }
+        for (byte b : longToBytes(king))
+            res.add(Chess.encodeMove(kong, b, (byte) 0, (byte) 0));
         res.addAll(legalKingCastleMoves(c));
         return res;
     }
@@ -755,38 +760,31 @@ public class Chess {
         List<Short> res = new ArrayList<>();
         long moves = 0L;
         long empty = ~occupied();
-        if (isWhite(c)) {
-            if (castleRights[0]) {
-                moves |= boardBuilder("g1") & e(empty);
-            }
-            if (castleRights[1]) {
-                moves |= boardBuilder("c1") & w(empty) & e(empty);
-            }
+        boolean white = isWhite(c);
+        if (white) {
+            if (wKC)
+                moves |= boardBuilder("g1") & e(empty) & empty;
+            if (wQC)
+                moves |= boardBuilder("c1") & w(empty) & e(empty) & empty;
+        } else {
+            if (bKC)
+                moves |= boardBuilder("g8") & e(empty) & empty;
+            if (bQC)
+                moves |= boardBuilder("c8") & w(empty) & e(empty) & empty;
         }
-        if (isBlack(c)) {
-            if (castleRights[2]) {
-                moves |= boardBuilder("g8") & e(empty);
-            }
-            if (castleRights[3]) {
-                moves |= boardBuilder("c8") & w(empty) & e(empty);
-            }
-        }
-        for (String str : longToStrings(moves)) {
-            res.add(Chess.encodeMove((str.charAt(1) == '1' ? "e1" : "e8") + str));
-        }
+        for (byte b : longToBytes(moves))
+            res.add(
+                    Chess.encodeMove((byte) (white ? 60 : 4), b, (byte) 0, (byte) 1));
         return res;
     }
 
     public boolean kingCanBeCaptured() {
-        char c = turn.equals("white") ? 'k' : 'K';
-        String king = longToStrings(pieces(c)).get(0);
-        Set<Short> temp = updatePsuedoLegalMoves();
-        for (short sh : temp) {
-            String str = decodeMove(sh);
-            if (str.substring(2).equals(king)) {
+        char c = turn ? 'k' : 'K';
+        byte king = longToBytes(pieces(c)).get(0);
+        Set<Short> temp = getPsuedoLegalMoves();
+        for (short sh : temp)
+            if (moveToByteArray(sh)[1] == king)
                 return true;
-            }
-        }
         return false;
     }
 
@@ -794,68 +792,87 @@ public class Chess {
     //Begin Pawn Methods
     public List<Short> legalPawnMoves(char c) {
         List<Short> res = new ArrayList<>();
-        for (String str : longToStrings(
-                pawnsThatCanDoublePush(c))) {
-            res.add(
-                    Chess.encodeMove(str + (isWhite(c) ? n(n(str)) : s(s(str))))
-            );
-        }
-        for (String str : longToStrings(
-                pawnsThatCanPush(c))) {
-            res.add(Chess.encodeMove(str + (isWhite(c) ? n(str) : s(str))));
-        }
-        for (String str : longToStrings(
-                pawnsThatCanCaptureEast(c))) {
-            res.add(Chess.encodeMove(str + (isWhite(c) ? n(e(str)) : s(e(str)))));
-        }
-        for (String str : longToStrings(
-                pawnsThatCanCaptureWest(c))) {
-            res.add(Chess.encodeMove(str + (isWhite(c) ? n(w(str)) : s(w(str)))));
-        }
+        boolean white = isWhite(c);
+        for (byte str : longToBytes(pawnsThatCanDoublePush(c)))
+            res.add(Chess.encodeMove(str, white ? n(n(str)) : s(s(str)), (byte) 0, (byte) 0));
+        for (byte str : longToBytes(pawnsThatCanPush(c)))
+            if ((white && n(str) < 8) || (!white && 55 < s(str)))
+                for (byte i = 0; i < 4; i++)
+                    res.add(Chess.encodeMove(str, white ? n(str) : s(str), i, (byte) 3));
+            else
+                res.add(Chess.encodeMove(str, white ? n(str) : s(str), (byte) 0, (byte) 0));
+        for (byte str : longToBytes(pawnsThatCanCaptureEast(c)))
+            if ((white && n(str) < 8) || (!white && 55 < s(str)))
+                for (byte i = 0; i < 4; i++)
+                    res.add(Chess.encodeMove(str, white ? n(e(str)) : s(e(str)), i, (byte) 3));
+            else
+                res.add(Chess.encodeMove(str, white ? n(e(str)) : s(e(str)), (byte) 0, (byte) 0));
+        for (byte str : longToBytes(pawnsThatCanCaptureWest(c)))
+            if ((white && n(str) < 8) || (!white && 55 < s(str)))
+                for (byte i = 0; i < 4; i++)
+                    res.add(Chess.encodeMove(str, white ? n(w(str)) : s(w(str)), i, (byte) 3));
+            else
+                res.add(Chess.encodeMove(str, white ? n(w(str)) : s(w(str)), (byte) 0, (byte) 0));
+        for (byte str : longToBytes(pawnsThatCanCaptureEastEnPassant(c)))
+            res.add(Chess.encodeMove(str, white ? n(e(str)) : s(e(str)), (byte) 0, (byte) 2));
+        for (byte str : longToBytes(pawnsThatCanCaptureWestEnPassant(c)))
+            res.add(Chess.encodeMove(str, white ? n(w(str)) : s(w(str)), (byte) 0, (byte) 2));
         return res;
     }
 
     public long pawnsThatCanDoublePush(char c) {
         long empty = ~occupied();
-        if (isWhite(c)) {
+        if (isWhite(c))
             return pieces(c) & s(empty) & s(s(empty)) & ROW2;
-        }
-        if (isBlack(c)) {
+        if (isBlack(c))
             return pieces(c) & n(empty) & n(n(empty)) & ROW7;
-        }
         return 0L;
     }
 
     public long pawnsThatCanPush(char c) {
         long empty = ~occupied();
-        if (isWhite(c)) {
+        if (isWhite(c))
             return pieces(c) & s(empty);
-        }
-        if (isBlack(c)) {
+        if (isBlack(c))
             return pieces(c) & n(empty);
-        }
         return 0L;
     }
 
     public long pawnsThatCanCaptureWest(char c) {
-        long ep = !enPassant.equals("") ? boardBuilder(enPassant) : 0;
-        if (isWhite(c)) {
-            return pieces(c) & se(blackOccupied() | ep);
-        }
-        if (isBlack(c)) {
-            return pieces(c) & ne(whiteOccupied() | ep);
-        }
+        if (isWhite(c))
+            return pieces(c) & se(blackOccupied());
+        if (isBlack(c))
+            return pieces(c) & ne(whiteOccupied());
+        return 0L;
+    }
+
+    public long pawnsThatCanCaptureWestEnPassant(char c) {
+        if (enPassant == -1)
+            return 0;
+        long ep = boardBuilder(enPassant);
+        if (isWhite(c))
+            return pieces(c) & se(ep);
+        if (isBlack(c))
+            return pieces(c) & ne(ep);
+        return 0L;
+    }
+
+    public long pawnsThatCanCaptureEastEnPassant(char c) {
+        if (enPassant == -1)
+            return 0;
+        long ep = boardBuilder(enPassant);
+        if (isWhite(c))
+            return pieces(c) & sw(ep);
+        if (isBlack(c))
+            return pieces(c) & nw(ep);
         return 0L;
     }
 
     public long pawnsThatCanCaptureEast(char c) {
-        long ep = !enPassant.equals("") ? boardBuilder(enPassant) : 0;
-        if (isWhite(c)) {
-            return pieces(c) & sw(blackOccupied() | ep);
-        }
-        if (isBlack(c)) {
-            return pieces(c) & nw(whiteOccupied() | ep);
-        }
+        if (isWhite(c))
+            return pieces(c) & sw(blackOccupied());
+        if (isBlack(c))
+            return pieces(c) & nw(whiteOccupied());
         return 0L;
     }
 
@@ -863,7 +880,7 @@ public class Chess {
     //Begin Bishop Methods
     public List<Short> legalBishopMoves(char c) {
         List<Short> res = new ArrayList<>();
-        for (String str : longToStrings(pieces(c))) {
+        for (byte str : longToBytes(pieces(c))) {
             res.addAll(bishopSouthWestMoves(c, str));
             res.addAll(bishopSouthEastMoves(c, str));
             res.addAll(bishopNorthWestMoves(c, str));
@@ -872,67 +889,43 @@ public class Chess {
         return res;
     }
 
-    public List<Short> bishopNorthEastMoves(char c, String str) {
+    public List<Short> bishopNorthEastMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!ne(temp).equals("-1")) && (pieceAt(ne(temp)) == ' ')) {
-            temp = ne(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!ne(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(ne(temp))) : isWhite(pieceAt(ne(temp))))
-        ) {
-            temp = ne(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = ne(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = ne(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> bishopNorthWestMoves(char c, String str) {
+    public List<Short> bishopNorthWestMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!nw(temp).equals("-1")) && (pieceAt(nw(temp)) == ' ')) {
-            temp = nw(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!nw(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(nw(temp))) : isWhite(pieceAt(nw(temp))))
-        ) {
-            temp = nw(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = nw(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = nw(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> bishopSouthEastMoves(char c, String str) {
+    public List<Short> bishopSouthEastMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!se(temp).equals("-1")) && (pieceAt(se(temp)) == ' ')) {
-            temp = se(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!se(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(se(temp))) : isWhite(pieceAt(se(temp))))
-        ) {
-            temp = se(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = se(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = se(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> bishopSouthWestMoves(char c, String str) {
+    public List<Short> bishopSouthWestMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!sw(temp).equals("-1")) && (pieceAt(sw(temp)) == ' ')) {
-            temp = sw(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!sw(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(sw(temp))) : isWhite(pieceAt(sw(temp))))
-        ) {
-            temp = sw(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = sw(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = sw(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
@@ -940,7 +933,7 @@ public class Chess {
     //Begin Rook Methods
     public List<Short> legalRookMoves(char c) {
         List<Short> res = new ArrayList<>();
-        for (String str : longToStrings(pieces(c))) {
+        for (byte str : longToBytes(pieces(c))) {
             res.addAll(rookNorthMoves(c, str));
             res.addAll(rookSouthMoves(c, str));
             res.addAll(rookEastMoves(c, str));
@@ -949,67 +942,43 @@ public class Chess {
         return res;
     }
 
-    public List<Short> rookNorthMoves(char c, String str) {
+    public List<Short> rookNorthMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!n(temp).equals("-1")) && (pieceAt(n(temp)) == ' ')) {
-            temp = n(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!n(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(n(temp))) : isWhite(pieceAt(n(temp))))
-        ) {
-            temp = n(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = n(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = n(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> rookSouthMoves(char c, String str) {
+    public List<Short> rookSouthMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!s(temp).equals("-1")) && (pieceAt(s(temp)) == ' ')) {
-            temp = s(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!s(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(s(temp))) : isWhite(pieceAt(s(temp))))
-        ) {
-            temp = s(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = s(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = s(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> rookEastMoves(char c, String str) {
+    public List<Short> rookEastMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!e(temp).equals("-1")) && (pieceAt(e(temp)) == ' ')) {
-            temp = e(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!e(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(e(temp))) : isWhite(pieceAt(e(temp))))
-        ) {
-            temp = e(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = e(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = e(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
-    public List<Short> rookWestMoves(char c, String str) {
+    public List<Short> rookWestMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
-        String temp = str;
-        while ((!w(temp).equals("-1")) && (pieceAt(w(temp)) == ' ')) {
-            temp = w(temp);
-            res.add(encodeMove(str + temp));
-        }
-        if ((!w(temp).equals("-1")) &&
-                (isWhite(c) ? isBlack(pieceAt(w(temp))) : isWhite(pieceAt(w(temp))))
-        ) {
-            temp = w(temp);
-            res.add(encodeMove(str + temp));
-        }
+        byte temp = w(str);
+        for (; temp != -1 && (pieceAt(temp) == ' '); temp = w(temp))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
+        if (temp != -1 && (isWhite(c) ? isBlack(pieceAt(temp)) : isWhite(pieceAt(temp))))
+            res.add(encodeMove(str, temp, (byte) 0, (byte) 0));
         return res;
     }
 
@@ -1025,20 +994,17 @@ public class Chess {
 
     //Begin Boolean Methods
     public boolean inCheck() {
-        char c = turn.equals("white") ? 'K' : 'k';
+        char c = turn ? 'K' : 'k';
         long l = pieces(c);
         if (l == 0L)
             return false;
-        String king = longToStrings(l).get(0);
-        turn = turn.equals("white") ? "black" : "white";
-        Set<Short> temp = updatePsuedoLegalMoves();
-        turn = turn.equals("white") ? "black" : "white";
-        for (short sh : temp) {
-            String str = decodeMove(sh);
-            if (str.substring(2).equals(king)) {
+        byte king = longToBytes(l).get(0);
+        turn = !turn;
+        Set<Short> temp = getPsuedoLegalMoves();
+        turn = !turn;
+        for (short sh : temp)
+            if (moveToByteArray(sh)[1] == king)
                 return true;
-            }
-        }
         return false;
     }
 
@@ -1050,20 +1016,16 @@ public class Chess {
         return Character.isLowerCase(c);
     }
 
-    public boolean isCapture(String s) {
-        return (pieceAt(s.substring(2)) != ' ')
-                ||
-                (s.substring(2).equals(enPassant)
-                        &&
-                        (Character.toLowerCase(pieceAt(s.substring(0, 2))) == 'p')
-                );
+    public boolean isCapture(short s) {
+        byte[] move = moveToByteArray(s);
+        return (pieceAt(move[1]) != ' ') || move[2] == 2;
     }
 
 
     //Begin Rolling Methods
-    public String rollback() {
+    public void rollback() {
         if (fenList.size() == 1)
-            return "";
+            return;
         String temp = fenList.remove(fenList.size() - 1);
         extraFenList.add(0, temp);
         short sh = allMovesMade.remove(allMovesMade.size() - 1);
@@ -1074,17 +1036,15 @@ public class Chess {
         setFromFEN(fen);
         fenList = tempFENList;
         allMovesMade = tempAllMovesMade;
-        return moveType(decodeMove(sh));
     }
 
-    public String rollForward() {
-        if (extraFenList.size() == 0) {
-            return "";
-        }
+
+    public void rollForward() {
+        if (extraFenList.size() == 0)
+            return;
         String temp = extraFenList.remove(0);
         fenList.add(temp);
         Short sh = extraAllMovesMade.remove(0);
-        String res = moveType(decodeMove(sh));
         allMovesMade.add(sh);
         List<String> tempFENList = new ArrayList<>(fenList);
         List<Short> tempAllMovesMade = new ArrayList<>(allMovesMade);
@@ -1092,7 +1052,6 @@ public class Chess {
         setFromFEN(fen);
         fenList = tempFENList;
         allMovesMade = tempAllMovesMade;
-        return res;
     }
 
     public String rollback(int n) {
@@ -1115,9 +1074,8 @@ public class Chess {
             System.out.println(args[0]);
         } else {
             StringBuilder res = new StringBuilder();
-            for (Object o : args) {
+            for (Object o : args)
                 res.append(o);
-            }
             System.out.print(res);
         }
     }
@@ -1128,88 +1086,83 @@ public class Chess {
             System.out.println(args[0]);
         } else {
             StringBuilder res = new StringBuilder();
-            for (Object o : args) {
+            for (Object o : args)
                 res.append(o);
-            }
             System.out.print(res);
         }
     }
 
 
     //Begin Directional String Methods
-    public static String n(String s) {
-        if (s.equals("-1") || s.charAt(1) >= '8') {
-            return "-1";
-        }
-        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) + 1);
+    public static byte n(byte s) {
+        if (s < 8)
+            return -1;
+        return (byte) (s - 8);
     }
 
-    public static String s(String s) {
-        if (s.equals("-1") || s.charAt(1) <= '1') {
-            return "-1";
-        }
-        return "" + s.charAt(0) + (Integer.parseInt("" + s.charAt(1)) - 1);
+    public static byte s(byte s) {
+        if (s == -1 || s > 55)
+            return -1;
+        return (byte) (s + 8);
     }
 
-    public static String e(String s) {
-        if (s.equals("-1") || s.charAt(0) == 'h') {
-            return "-1";
-        }
-        return "" + ((char) (s.charAt(0) + 1)) + s.charAt(1);
+    public static byte e(byte s) {
+        if (s == -1 || s % 8 == 7)
+            return -1;
+        return (byte) (s + 1);
     }
 
-    public static String w(String s) {
-        if (s.equals("-1") || s.charAt(0) == 'a') {
-            return "-1";
-        }
-        return "" + ((char) (s.charAt(0) - 1)) + s.charAt(1);
+    public static byte w(byte s) {
+        if (s == -1 || s % 8 == 0)
+            return -1;
+        return (byte) (s - 1);
     }
 
-    public static String nw(String a) {
+    public static byte nw(byte a) {
         return n(w(a));
     }
 
-    public static String ne(String a) {
+    public static byte ne(byte a) {
         return n(e(a));
     }
 
-    public static String se(String a) {
+    public static byte se(byte a) {
         return s(e(a));
     }
 
-    public static String sw(String a) {
+    public static byte sw(byte a) {
         return s(w(a));
     }
 
-    public static String nne(String a) {
+    public static byte nne(byte a) {
         return n(ne(a));
     }
 
-    public static String nee(String a) {
+    public static byte nee(byte a) {
         return ne(e(a));
     }
 
-    public static String nnw(String a) {
+    public static byte nnw(byte a) {
         return n(nw(a));
     }
 
-    public static String nww(String a) {
+    public static byte nww(byte a) {
         return nw(w(a));
     }
 
-    public static String sse(String a) {
+    public static byte sse(byte a) {
         return s(se(a));
     }
 
-    public static String see(String a) {
+    public static byte see(byte a) {
         return se(e(a));
     }
 
-    public static String ssw(String a) {
+    public static byte ssw(byte a) {
         return s(sw(a));
     }
 
-    public static String sww(String a) {
+    public static byte sww(byte a) {
         return sw(w(a));
     }
 
@@ -1294,29 +1247,35 @@ public class Chess {
     }
 
 
-    public static List<String> longToStrings(Long l) {
-        List<String> res = new ArrayList<>();
-        for (byte i = 0; i < 64; i++) {
+    public static List<Byte> longToBytes(Long l) {
+        List<Byte> res = new ArrayList<>();
+        for (byte i = 0; i < 64; i++)
             if (((l >>> i) & 1L) == 1L)
-                res.add(byteToString(i));
-        }
+                res.add(i);
         return res;
     }
 
 
     //Begin Decoding Methods
     public static String decodeMove(short move) {
-        String destination = Chess.byteToString((byte) (63 & (move >>> 10)));
-        String origin = Chess.byteToString((byte) (63 & (move >>> 4)));
-        return origin + destination;
+        String origin = Chess.byteToString((byte) (63 & (move >>> 10)));
+        String destination = Chess.byteToString((byte) (63 & (move >>> 4)));
+        boolean isPromotion = (3 & (move)) == 3;
+        char promotion = switch (3 & (move >>> 2)) {
+            case 1 -> 'n';
+            case 2 -> 'r';
+            case 3 -> 'b';
+            default -> 'q';
+        };
+        return origin + destination + (isPromotion ? promotion : "");
     }
 
-    public static byte[] decodeMoveYEYE(short move) {
+    public static byte[] moveToByteArray(short move) {
         byte[] res = new byte[4];
         res[0] = (byte) (63 & (move >>> 10));
         res[1] = (byte) (63 & (move >>> 4));
-        res[2] = (byte) (63 & (move >>> 2));
-        res[3] = (byte) (63 & move);
+        res[2] = (byte) (3 & (move >>> 2));
+        res[3] = (byte) (3 & move);
         return res;
     }
 
@@ -1332,21 +1291,49 @@ public class Chess {
         return (char) (((63 - a) & 7) + 97);
     }
 
-
-    //Begin Encoding Methods
-    public static short encodeMove(byte destination, byte origin, byte promotion, byte flag) {
-        return (short) ((destination << 10) | (origin << 4) | (promotion << 2) | flag);
+    public static List<String> shortToStringArray(List<Short> shorts) {
+        List<String> res = new ArrayList<>();
+        for (short b : shorts)
+            res.add(decodeMove(b));
+        return res;
     }
 
-    public static short encodeMove(String move) {
+    //Begin Encoding Methods
+    public static short encodeMove(byte origin, byte destination, byte promotion, byte flag) {
+        return (short) ((origin << 10) | (destination << 4) | (promotion << 2) | flag);
+    }
+
+    public short encodeMove(String move) {
+        move += 'q';
         byte origin = Chess.stringToByte(move.substring(0, 2));
-        byte destination = Chess.stringToByte(move.substring(2));
-        byte promotion = 0;
+        byte destination = Chess.stringToByte(move.substring(2, 4));
+        int promotion = 0;
         byte flag = 0;
-        return encodeMove(destination, origin, promotion, flag);
+        if (wKC && origin == 60 && destination == 62)
+            flag = 1;
+        if (wQC && origin == 60 && destination == 58)
+            flag = 1;
+        if (bKC && origin == 4 && destination == 6)
+            flag = 1;
+        if (bQC && origin == 4 && destination == 2)
+            flag = 1;
+        if (destination == enPassant && Character.toLowerCase(pieceAt(origin)) == 'p')
+            flag = 2;
+        if ((destination < 8 && pieceAt(origin) == 'P') || (55 < destination && pieceAt(origin) == 'p')) {
+            flag = 3;
+            promotion = switch (move.charAt(4)) {
+                case 'n' -> 1;
+                case 'r' -> 2;
+                case 'b' -> 3;
+                default -> 0;
+            };
+        }
+        return encodeMove(origin, destination, (byte) promotion, flag);
     }
 
     public static byte stringToByte(String str) {
+        if (str.equals(""))
+            return -1;
         return (byte) (351 + str.charAt(0) - 8 * str.charAt(1));
     }
 
@@ -1362,9 +1349,8 @@ public class Chess {
                 }
             }
             print(temp != ' ' ? temp : "*", " ");
-            if ((k + 1) % 8 == 0 && (k != 63)) {
+            if ((k + 1) % 8 == 0 && (k != 63))
                 print("\r\n" + (7 - (k >>> 3)) + " | ", "");
-            }
         }
         print("\r\n  -----------------");
         print("    a b c d e f g h");
@@ -1375,12 +1361,32 @@ public class Chess {
         for (int i = 0; i < 64; i++) {
             long temp = (a) >>> i & 1;
             System.out.print((temp != 0 ? temp : "*") + " ");
-            if ((i + 1) % 8 == 0 && i != 63) {
+            if ((i + 1) % 8 == 0 && i != 63)
                 System.out.print("\r\n" + (7 - (i >>> 3)) + " | ");
-            }
         }
         System.out.println("\r\n  -----------------");
         System.out.println("    a b c d e f g h");
     }
 
+    public long Perft(int depth, boolean print, Map<Short, Long> map) {
+        List<Short> moves = new ArrayList<>(legalMoves);
+        int n_moves, i;
+        int nodes = 0;
+        if (depth == 0)
+            return 1;
+        n_moves = moves.size();
+        for (i = 0; i < n_moves; i++) {
+            makeMove(moves.get(i));
+            long l = Perft(depth - 1, false, map);
+            nodes += l;
+            if (print)
+                map.put(moves.get(i), l);
+            undo();
+        }
+        if (print) {
+            System.out.println("Moves: " + n_moves);
+            System.out.println("Nodes: " + nodes);
+        }
+        return nodes;
+    }
 }

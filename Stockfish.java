@@ -28,7 +28,7 @@ public class Stockfish {
                     .setDepth(depth)//Setting this makes Stockfish search deeper
                     .setMovetime(mintime) //Setting this overrides the minimum thinking time
                     .build()); // This is handling the result of the query
-            return s.substring(0,4);
+            return s;
         } catch (Exception e) {
             e.printStackTrace();
         }

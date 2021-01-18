@@ -1,121 +1,103 @@
 import java.util.*;
 
 public class Dogfish {
-    dogThread dog = new dogThread(null,2);
-    public static float[] minimax(Chess board, int depth, float alpha, float beta, boolean maximizingPlayer) {
-       // Chess.println(depth);
-        float[] result = new float[2];
-        result[1] = depth;
-        float res = Evaluation.evaluate(board);
-        if (depth == -1 || depth == 0 || board.legalMoves.size() == 0) {
-            result[0] = res;
-            result[1] = 0;
-            return result;
-        }
-        if (maximizingPlayer) {
-            float maxEval = -5000;
-            ArrayList<Chess> moves = new ArrayList<>();
-            for (short sh: board.legalMoves)
-                moves.add(board.nextBoard(Chess.decodeMove(sh)));
-            for (Chess temp : moves) {
-                float eval = minimax(temp, depth - 1, alpha, beta, false)[0];
-                maxEval = Math.max(maxEval, eval);
-                alpha = Math.max(alpha, eval);
-                if (alpha >= beta) {
-                    break;
+    dogThread dog = new dogThread(null, 2, null);
+
+    public static float negamax(Chess board, int depth, float alpha, float beta, boolean color) {
+        if (board.gameOver)
+            return Evaluation.evaluate(board) * (color ? 1 : -1);
+        if (depth == 0) {
+            //String lastMove = Chess.decodeMove(board.allMovesMade.get(board.allMovesMade.size() - 1));
+            //String lastFen = board.fenList.get(board.fenList.size() - 2);
+            //boolean wasCapture = Chess.pieceAt(lastFen, lastMove.substring(2, 4)) != ' ';
+            if (false) {
+                List<Short> childMoves = new ArrayList<>(board.legalMoves);
+                float value = -99999999;
+                for (short move : childMoves) {
+                    board.makeMove(move);
+                    value = Math.max(value, -negamax(board, 0, -beta, -alpha, !color));
+                    board.undo();
+                    alpha = Math.max(alpha, value);
+                    if (alpha >= beta)
+                        break;
                 }
-            }
-            result[0] = maxEval;
-            return result;
-        } else {
-            float minEval = 5000;
-            ArrayList<Chess> moves = new ArrayList<>();
-            for (short sh : board.legalMoves)
-                moves.add(board.nextBoard(Chess.decodeMove(sh)));
-            for (Chess temp : moves) {
-                float eval = minimax(temp, depth - 1, alpha, beta, true)[0];
-                minEval = Math.min(minEval, eval);
-                beta = Math.min(beta, eval);
-                if (beta <= alpha) {
-                    break;
-                }
-            }
-            result[0] = minEval;
-            return result;
+                // Chess temp = new Chess(lastFen);
+                // temp.drawBoard();
+                // Chess.println("Quiet board avoided. :" + lastMove);
+                return value;
+            } else
+                return Evaluation.evaluate(board) * (color ? 1 : -1);
         }
+        List<Short> childMoves = new ArrayList<>(board.legalMoves);
+        float value = -99999999;
+        for (short move : childMoves) {
+            board.makeMove(move);
+            value = Math.max(value, -negamax(board, depth - 1, -beta, -alpha, !color));
+            board.undo();
+            alpha = Math.max(alpha, value);
+            if (alpha >= beta)
+                break;
+        }
+        return value;
     }
 
-    public static String[] ponder(Chess board, int dw, float alpha, float beta) {
-        int depth = dw + 1;
-        ArrayList<Short> moves = new ArrayList<>(board.legalMoves);
-        String[] result = new String[3];
-        if (moves.size() == 0) {
-            result[0] = "game";
-            result[1] = "is";
-            result[2] = "over!";
-            return result;
+    public static MoveEval ponder(Chess temp, int depth, float alpha, float beta, List<Short> moveList) {
+        Chess board = new Chess(temp);
+        if (board.gameOver)
+            return new MoveEval(0, "");
+        if (depth == 0) {
+            Collections.shuffle(moveList);
+            board.makeMove(moveList.get(0));
+            float eval = Evaluation.evaluate(board);
+            board.undo();
+            return new MoveEval(eval, moveList.get(0));
         }
-        if (depth == 1) {
-            Collections.shuffle(moves);
-            result[0] = Chess.decodeMove(moves.get(0));
-            result[1] = "" + Evaluation.evaluate(board.nextBoard(result[0]));
-            result[2] = "0";
-            return result;
-        }
-        if (board.turn.equals("white")) {
-            float maxEval = -5000;
-            int index = 0;
-            float cDepth = 0;
-            for (int i = 0; i < moves.size(); i++) {
-                String temp1 = Chess.decodeMove(moves.get(i));
-                float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, false);
-                if (eval[0] >= maxEval) {
-                    maxEval = eval[0];
-                    index = i;
-                    cDepth = eval[1];
-                }
-                alpha = Math.max(alpha, eval[0]);
-                if (alpha >= beta) {
-                    break;
-                }
+     //   Map<Short, Float> moveEvalPairs = new HashMap<>();
+        float value = -99999999;
+        float eval;
+     //   int index = 0;
+        short bestMove = 0;
+        for (short move : moveList) {
+            board.makeMove(move);
+            eval = -negamax(board, depth - 1, -beta, -alpha, board.turn);
+            board.undo();
+         //   moveEvalPairs.put(move, eval);
+         //   index++;
+            if (eval > value) {
+                value = eval;
+                bestMove = move;
             }
-            result[0] = Chess.decodeMove(moves.get(index));
-            result[1] = "" + maxEval;
-            result[2] = "" + cDepth;
-            return result;
-        } else {
-            float minEval = 5000;
-            int index = 0;
-            float cDepth = 0;
-            for (int i = 0; i < moves.size(); i++) {
-                String temp1 = Chess.decodeMove(moves.get(i));
-                float[] eval = minimax(board.nextBoard(temp1), depth - 1, alpha, beta, true);
-                if (eval[0] <= minEval) {
-                    minEval = eval[0];
-                    index = i;
-                    cDepth = eval[1];
-                }
-                beta = Math.min(beta, eval[0]);
-                if (beta <= alpha) {
-                    break;
-                }
-            }
-            result[0] = Chess.decodeMove(moves.get(index));
-            result[1] = "" + minEval;
-            result[2] = "" + cDepth;
-            return result;
+            alpha = Math.max(alpha, value);
+            if (alpha >= beta)
+                break;
         }
+        //   ArrayList<Short> sortedMoves = new ArrayList<>(moveEvalPairs.keySet());
+        //  sortedMoves.sort(
+        //          Comparator.comparing(moveEvalPairs::get)
+        //  );
+        // List<Short> bestMoves = new ArrayList<>();
+        //  for (short sh : moveEvalPairs.keySet())
+        //     if (Math.abs(value - moveEvalPairs.get(sh)) < .1)
+        //        bestMoves.add(sh);
+        //  Collections.shuffle(bestMoves);
+        //   bestMove = bestMoves.get(0);
+        //   value = moveEvalPairs.get(bestMove);
+        //   moveList.subList(0, index).clear();
+        //   System.out.print("\r\n[ ");
+        //   for (short sh : sortedMoves)
+        //       moveList.add(0, sh);
+       // for (short sh : moveList)
+       //     System.out.print("(" + Chess.decodeMove(sh) + ", " + moveEvalPairs.get(sh) + "),");
+       //  System.out.print("]");
+          Chess.println(" " + Chess.decodeMove(bestMove) + " " + value + " " + depth);
+        return new MoveEval(value, bestMove);
     }
-    public String move(Chess logic,int depth,String old){
-        if(!dog.running){
-            dog = new dogThread(logic, depth);
+
+    public MoveEval move(Chess logic, int depth, List<Short> moves) {
+        if (!dog.running) {
+            dog = new dogThread(logic, depth, moves);
             dog.start();
         }
-        String[] res = dog.move();
-        if (!res[0].equals("")) {
-            return res[0];
-        } else {
-            return new String[]{old, "", ""}[0];
-        }
+        return dog.move();
     }
 }
