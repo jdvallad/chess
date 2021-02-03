@@ -319,42 +319,30 @@ public class Chess implements Comparable<Chess> {
     }
 
     public char pieceAt(byte str) {
-        if (((wP >>> str) & 1L) == 1L) {
+        if (((wP >>> str) & 1L) == 1L)
             return 'P';
-        }
-        if (((wR >>> str) & 1L) == 1L) {
+        if (((wR >>> str) & 1L) == 1L)
             return 'R';
-        }
-        if (((wN >>> str) & 1L) == 1L) {
+        if (((wN >>> str) & 1L) == 1L)
             return 'N';
-        }
-        if (((wB >>> str) & 1L) == 1L) {
+        if (((wB >>> str) & 1L) == 1L)
             return 'B';
-        }
-        if (((wQ >>> str) & 1L) == 1L) {
+        if (((wQ >>> str) & 1L) == 1L)
             return 'Q';
-        }
-        if (((wK >>> str) & 1L) == 1L) {
+        if (((wK >>> str) & 1L) == 1L)
             return 'K';
-        }
-        if (((bP >>> str) & 1L) == 1L) {
+        if (((bP >>> str) & 1L) == 1L)
             return 'p';
-        }
-        if (((bR >>> str) & 1L) == 1L) {
+        if (((bR >>> str) & 1L) == 1L)
             return 'r';
-        }
-        if (((bN >>> str) & 1L) == 1L) {
+        if (((bN >>> str) & 1L) == 1L)
             return 'n';
-        }
-        if (((bB >>> str) & 1L) == 1L) {
+        if (((bB >>> str) & 1L) == 1L)
             return 'b';
-        }
-        if (((bQ >>> str) & 1L) == 1L) {
+        if (((bQ >>> str) & 1L) == 1L)
             return 'q';
-        }
-        if (((bK >>> str) & 1L) == 1L) {
+        if (((bK >>> str) & 1L) == 1L)
             return 'k';
-        }
         return ' ';
     }
 

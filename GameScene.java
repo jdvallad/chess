@@ -1,4 +1,5 @@
 import processing.sound.SoundFile;
+
 import java.util.*;
 
 public class GameScene extends Scene {
@@ -10,7 +11,7 @@ public class GameScene extends Scene {
     Stockfish fish = new Stockfish();
     Dogfish dog = new Dogfish();
     List<Button> buttons;
-    String game = "8/1Kn1p3/1p5N/4p1q1/4k1N1/3R2p1/Qn2B3/7R w - - 0 1";
+    String game = "";
 
     public GameScene(SceneSwitcher app, String str, boolean bn) {
         super(app, str, bn);
@@ -54,6 +55,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, "back", true, 50f, -50f, .8f, screen.loadImage("./data/buttons/back.png")) {
                     public void action() {
+                        dog.dog = new dogThread(null, 2, null);
                         board.playSound(logic.rollback(2));
                         board.setFromFEN(logic.fen);
                         for (Button button : buttons) {
@@ -102,7 +104,7 @@ public class GameScene extends Scene {
             return;
         }
         refresh();
-        move = getMove(move, "dog,3","human");
+        move = getMove(move, "human", "dog,1");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
         board.drawLastMove(Chess.decodeMove(logic.lastMove()));
@@ -110,7 +112,6 @@ public class GameScene extends Scene {
             String moveType = logic.moveType(logic.encodeMove(move));
             board.playSound(moveType);
             logic.makeMove(logic.encodeMove(move));
-            Chess.println("Score: "+Evaluation.evaluate(logic));
             move = "";
             board.setFromFEN(logic.fen);
             if (logic.inCheck())
@@ -136,6 +137,7 @@ public class GameScene extends Scene {
         for (Button button : buttons)
             button.update();
     }
+
     public String getMove(String move, String white, String black) {
         String[] w = white.replaceAll("\\s", "").split(",");
         String[] b = black.replaceAll("\\s", "").split(",");
@@ -158,7 +160,7 @@ public class GameScene extends Scene {
     }
 
     public String dogMove(int depth) {
-        return dog.move(logic,depth, new ArrayList<>(logic.legalMoves)).getMove();
+        return dog.move(logic, depth, new ArrayList<>(logic.legalMoves)).getMove();
     }
 
     public String stockMove(int depth, int diff) {

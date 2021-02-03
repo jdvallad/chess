@@ -32,7 +32,6 @@ public class dogThread extends Thread {
         } catch (Exception e) {
             running = false;
             move = new MoveEval(0, "");
-            System.out.println(e);
         }
     }
 
