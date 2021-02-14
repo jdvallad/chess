@@ -41,7 +41,7 @@ public class GameScene extends Scene {
                     public void action() {
                         board.start.play();
                         dog.dog = new dogThread(null, 2, null);
-                        logic.reset();
+                      //  logic.reset();
                         board.setFromFEN(logic.fen);
                         for (Button button : buttons) {
                             if (button.getId().equals("result")) {
@@ -56,7 +56,7 @@ public class GameScene extends Scene {
                 new Button(screen, "back", true, 50f, -50f, .8f, screen.loadImage("./data/buttons/back.png")) {
                     public void action() {
                         dog.dog = new dogThread(null, 2, null);
-                        board.playSound(logic.rollback(2));
+                    //    board.playSound(logic.rollback(2));
                         board.setFromFEN(logic.fen);
                         for (Button button : buttons) {
                             if (button.getId().equals("result")) {
@@ -70,7 +70,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, "forward", true, -50f, -50f, .8f, screen.loadImage("./data/buttons/forward.png")) {
                     public void action() {
-                        board.playSound(logic.rollForward(2));
+                      //  board.playSound(logic.rollForward(2));
                         board.setFromFEN(logic.fen);
                         snap();
                     }
@@ -107,7 +107,7 @@ public class GameScene extends Scene {
         move = getMove(move, "human", "dog,2");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
-        board.drawLastMove(Chess.decodeMove(logic.lastMove()));
+      //  board.drawLastMove(Chess.decodeMove(logic.lastMove()));
         if (move.length() > 2 && logic.legalMoves.contains(logic.encodeMove(move))) {
             String moveType = logic.moveType(logic.encodeMove(move));
             board.playSound(moveType);
