@@ -104,7 +104,7 @@ public class GameScene extends Scene {
             return;
         }
         refresh();
-        move = getMove(move, "human", "dog,1");
+        move = getMove(move, "human", "dog,2");
         board.drawMove(move);
         board.drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
         board.drawLastMove(Chess.decodeMove(logic.lastMove()));
@@ -164,26 +164,7 @@ public class GameScene extends Scene {
     }
 
     public String stockMove(int depth, int diff) {
-        String res = fish.move(logic, depth, diff, move);
-        if (res.equals(""))
-            return "";
-        return res;
-    }
-
-
-    public String randomMove() {
-        List<Short> temp = new ArrayList<>(logic.legalMoves);
-        Collections.shuffle(temp);
-        if (temp.size() != 0) {
-            return Chess.decodeMove(temp.get(0));
-        }
-        return move;
-    }
-
-    public void clear() {
-        logic.clear();
-        board.setFromFEN(logic.fen);
-        snap();
+        return fish.move(logic, depth, diff, move);
     }
 
     public void mousePressed() {

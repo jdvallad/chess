@@ -10,7 +10,27 @@ public class Chess implements Comparable<Chess> {
     static final long ROW2 = 71776119061217280L;
     static final long ROW7 = 65280L;
     static final long ROW8 = 255L;
-
+    static final int[] directionOffsets = { 8 , -8, -1, 1, 7, -7, 9, -9};
+    static final int[][] numSquaresToEdge;
+    static {
+        numSquaresToEdge = new int[64][];
+        for(byte i = 0; i < 64; i++){
+            int rank = rank(i);
+            int file = file(i);
+            int numNorth = 7 - rank;
+            int numEast = 7 - file;
+            numSquaresToEdge[i] = new int[]{
+                    numNorth,
+                    rank,
+                    file,
+                    numEast,
+                    Math.min(numNorth, file),
+                    Math.min(rank,numEast),
+                    Math.min(numNorth,numEast),
+                    Math.min(rank, file)
+            };
+        }
+    }
     //Begin Piece Instances
     long wP = 71776119061217280L;
     long wR = -9151314442816847872L;
@@ -191,6 +211,14 @@ public class Chess implements Comparable<Chess> {
     }
 
     public void updateCastleRights(char piece, byte move) {
+        if (pieceAt((byte) 0) != 'r')
+            bQC = false;
+        if (pieceAt((byte) 7) != 'r')
+            bKC = false;
+        if (pieceAt((byte) 56) != 'R')
+            wQC = false;
+        if (pieceAt((byte) 63) != 'R')
+            wKC = false;
         if (piece == 'k') {
             bKC = bQC = false;
             return;
@@ -524,34 +552,20 @@ public class Chess implements Comparable<Chess> {
             if (destination == 3)
                 d8 = true;
         }
-        if (wKC &&
-                (f1 || pieceAt((byte) 54) == 'p' || pieceAt((byte) 52) == 'p')) {
-            res.remove(encodeMove("e1g1q"));
-            res.remove(encodeMove("e1g1n"));
-            res.remove(encodeMove("e1g1r"));
-            res.remove(encodeMove("e1g1b"));
+        if (inCheck()) {
+            res.remove(encodeMove("e1g1"));
+            res.remove(encodeMove("e1c1"));
+            res.remove(encodeMove("e8g8"));
+            res.remove(encodeMove("e8c8"));
         }
-        if (wQC &&
-                (d1 || pieceAt((byte) 52) == 'p' || pieceAt((byte) 50) == 'p')) {
-            res.remove(encodeMove("e1c1q"));
-            res.remove(encodeMove("e1c1n"));
-            res.remove(encodeMove("e1c1r"));
-            res.remove(encodeMove("e1c1b"));
-        }
-        if (bKC &&
-                (f8 || pieceAt((byte) 14) == 'P' || pieceAt((byte) 12) == 'P')) {
-            res.remove(encodeMove("e8g8q"));
-            res.remove(encodeMove("e8g8n"));
-            res.remove(encodeMove("e8g8r"));
-            res.remove(encodeMove("e8g8b"));
-        }
-        if (bQC &&
-                (d8 || pieceAt((byte) 12) == 'P' || pieceAt((byte) 10) == 'P')) {
-            res.remove(encodeMove("e8c8q"));
-            res.remove(encodeMove("e8c8n"));
-            res.remove(encodeMove("e8c8r"));
-            res.remove(encodeMove("e8c8b"));
-        }
+        if (wKC && (f1 || pieceAt((byte) 54) == 'p' || pieceAt((byte) 52) == 'p'))
+            res.remove(encodeMove("e1g1"));
+        if (wQC && (d1 || pieceAt((byte) 52) == 'p' || pieceAt((byte) 50) == 'p'))
+            res.remove(encodeMove("e1c1"));
+        if (bKC && (f8 || pieceAt((byte) 14) == 'P' || pieceAt((byte) 12) == 'P'))
+            res.remove(encodeMove("e8g8"));
+        if (bQC && (d8 || pieceAt((byte) 12) == 'P' || pieceAt((byte) 10) == 'P'))
+            res.remove(encodeMove("e8c8"));
         return res;
     }
 
@@ -940,6 +954,9 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
+    public List<Short> generateSlidingMoves(byte stareSquare, char piece){
+        return null;
+    }
     public List<Short> rookSouthMoves(char c, byte str) {
         List<Short> res = new ArrayList<>();
         byte temp = s(str);
