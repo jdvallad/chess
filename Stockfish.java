@@ -2,7 +2,6 @@ import xyz.niflheim.stockfish.engine.enums.Option;
 import xyz.niflheim.stockfish.engine.enums.Query;
 import xyz.niflheim.stockfish.engine.enums.QueryType;
 import xyz.niflheim.stockfish.engine.enums.Variant;
-import xyz.niflheim.stockfish.exceptions.StockfishInitException;
 
 public class Stockfish {
     StockfishClient client;

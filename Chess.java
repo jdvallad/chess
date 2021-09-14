@@ -60,12 +60,12 @@ public class Chess implements Comparable<Chess> {
         else
             setFromFEN(f);
     }
-
+/*
     private Chess(String f, String shadow) {
         if (!shadow.equals("filler text"))
             simpleSetFromFEN(f);
     }
-
+*/
     public Chess(Chess temp) {
         extraAllMovesMade = new ArrayList<>(temp.extraAllMovesMade);
         psuedoLegalMoves = new HashSet<>(temp.psuedoLegalMoves);
@@ -345,7 +345,7 @@ public class Chess implements Comparable<Chess> {
             return 'k';
         return ' ';
     }
-
+/*
     private void pieces_initializer() {
         wP = 71776119061217280L;
         wR = -9151314442816847872L;
@@ -360,6 +360,7 @@ public class Chess implements Comparable<Chess> {
         wQ = 8L;
         wK = 16L;
     }
+    */
 
 
     //Begin FEN Methods

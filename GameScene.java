@@ -1,3 +1,4 @@
+import processing.core.PConstants;
 import processing.sound.SoundFile;
 
 import java.util.*;
@@ -211,7 +212,7 @@ public class GameScene extends Scene {
     }
 
     public void keyPressed() {
-        if (screen.key == screen.ESC)
+        if (screen.key == PConstants.ESC)
             screen.key = 0;
     }
 

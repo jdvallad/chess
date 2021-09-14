@@ -23,15 +23,15 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
 
 public class StockfishClient {
     private final Queue<Stockfish> engines;
 
     public StockfishClient(String path, int instances, Variant variant, Set<Option> options) throws StockfishInitException {
-        ExecutorService executor = Executors.newFixedThreadPool(instances);
-        ExecutorService callback = Executors.newSingleThreadExecutor();
+       // ExecutorService executor = Executors.newFixedThreadPool(instances);
+       // ExecutorService callback = Executors.newSingleThreadExecutor();
         engines = new ArrayBlockingQueue<>(instances);
 
         for (int i = 0; i < instances; i++)

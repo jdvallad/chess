@@ -1,0 +1,15 @@
+{
+    "java.project.referencedLibraries": {
+        "include": [
+            "lib/**/*.jar",
+            "lib/**/*.dll",
+            "lib/**/*.properties"
+        ],
+        "exclude": [
+        ]
+    },
+    "java.project.sourcePaths": [
+        "lib",
+        ""
+    ]
+}

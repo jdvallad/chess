@@ -1,4 +1,5 @@
 import processing.core.PApplet;
+import processing.core.PConstants;
 import processing.core.PImage;
 import processing.sound.SoundFile;
 
@@ -183,7 +184,7 @@ public class Chessboard {
     }
 
     public boolean holdingPiece(String move) {
-        return screen.mousePressed && screen.mouseButton == screen.LEFT && move.length() == 2;
+        return screen.mousePressed && screen.mouseButton == PConstants.LEFT && move.length() == 2;
     }
 
     public boolean mouseOnBoard() {
@@ -252,7 +253,7 @@ public class Chessboard {
     }
 
     public String startMoveOnMousePress(String m,boolean check) {
-        if (mouseOnBoard() && screen.mouseButton == screen.LEFT) {
+        if (mouseOnBoard() && screen.mouseButton == PConstants.LEFT) {
             String move = m;
             int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
             int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
