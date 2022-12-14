@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class Chessboard {
-    float widthP, heightP;
     PApplet screen;
     PImage[] images;
     char[][] pieceBoard = new char[8][8];
@@ -62,8 +61,6 @@ public class Chessboard {
     }
 
     public void settings() {
-        widthP = (float) screen.width / 1920f;
-        heightP = (float) screen.height / 1080f;
         images = new PImage[19];
         start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
         end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
@@ -175,8 +172,8 @@ public class Chessboard {
     }
 
     public boolean lookingForPickupPiece(String move) {
-        int x = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
-        int y = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
+        int x = (int) ((((screen.mouseY)) - 28) / (128));
+        int y = (int) ((((screen.mouseX)) - 448) / (128));
         if (perspective.equals("black"))
             return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0) && (pieceBoard[7 - x][7 - y] != ' ');
         else
@@ -188,7 +185,7 @@ public class Chessboard {
     }
 
     public boolean mouseOnBoard() {
-        return 448 * widthP < ((screen.mouseX)) && ((screen.mouseX)) < 1472 * widthP && 28 * heightP < ((screen.mouseY)) && ((screen.mouseY)) < 1052 * heightP;
+        return 448 < ((screen.mouseX)) && ((screen.mouseX)) < 1472  && 28 < ((screen.mouseY)) && ((screen.mouseY)) < 1052;
     }
 
     public void showCheck() {
@@ -221,8 +218,8 @@ public class Chessboard {
     public String finishMoveOnMouseRelease(String m) {
         String move = m;
         if (mouseOnBoard()) {
-            int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+            int x = (int) ((((screen.mouseX)) - 448) / (128));
+            int y = (int) ((((screen.mouseY)) - 28) / (128));
             if (perspective.equals("black")) {
                 x = 7 - x;
                 y = 7 - y;
@@ -241,8 +238,8 @@ public class Chessboard {
     }
 
     public void highlightHoverSpace(String m) {
-        int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-        int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+        int x = (int) ((((screen.mouseX)) - 448) / (128));
+        int y = (int) ((((screen.mouseY)) - 28) / (128));
         if (perspective.equals("black")) {
             x = 7 - x;
             y = 7 - y;
@@ -255,8 +252,8 @@ public class Chessboard {
     public String startMoveOnMousePress(String m,boolean check) {
         if (mouseOnBoard() && screen.mouseButton == PConstants.LEFT) {
             String move = m;
-            int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+            int x = (int) ((((screen.mouseX)) - 448) / (128));
+            int y = (int) ((((screen.mouseY)) - 28) / (128));
             if (perspective.equals("black")) {
                 x = 7 - x;
                 y = 7 - y;
@@ -372,7 +369,7 @@ public class Chessboard {
             team = 1;
         }
         screen.image(images[(r + c) % 2 == 0 ? 17 : 18], 448 + 128 * c, 28 + 128 * r, 128, 128);
-        screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64 * widthP) / widthP, (screen.mouseY - 64 * heightP) / heightP, 128, 128);
+        screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64), (screen.mouseY - 64), 128, 128);
     }
 
     public void drawFloatingPiece(char piece) {
@@ -398,7 +395,7 @@ public class Chessboard {
         } else {
             team = 1;
         }
-        screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64 * widthP) / widthP, (screen.mouseY - 64 * heightP) / heightP, 128, 128);
+        screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64), (screen.mouseY - 64), 128, 128);
     }
 
     public Set<Short> legalMovesFromPiece(String location, Set<Short> legalMoves) {
@@ -413,8 +410,8 @@ public class Chessboard {
 
     public void drawLegalMovesFromPiece(String location, Set<Short> legalMoves) {
         if (location.equals("")) {
-            int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+            int x = (int) ((((screen.mouseX)) - 448) / 128);
+            int y = (int) ((((screen.mouseY)) - 28 ) / 128);
             if (perspective.equals("black")) {
                 x = 7 - x;
                 y = 7 - y;
@@ -428,8 +425,8 @@ public class Chessboard {
             String str = Chess.decodeMove(sh);
             int r1 = 8 - Integer.parseInt("" + str.charAt(3));
             int c1 = convertFileToInt(str.charAt(2));
-            int x = (int) ((((screen.mouseX)) - 448 * widthP) / (128 * widthP));
-            int y = (int) ((((screen.mouseY)) - 28 * heightP) / (128 * heightP));
+            int x = (int) ((((screen.mouseX)) - 448) / 128);
+            int y = (int) ((((screen.mouseY)) - 28 ) / 128);
             if (perspective.equals("black")) {
                 r1 = 7 - r1;
                 c1 = 7 - c1;

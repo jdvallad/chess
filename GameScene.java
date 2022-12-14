@@ -5,7 +5,6 @@ import java.util.*;
 
 public class GameScene extends Scene {
 
-    float widthP, heightP; //used to resize window on different resolutions
     Chessboard board; //handles graphics of board
     Chess logic; //handles logic of Chess
     String move; //keeps track of current move
@@ -19,8 +18,6 @@ public class GameScene extends Scene {
     }
 
     public void settings() {
-        widthP = (float) screen.width / 1920f;
-        heightP = (float) screen.height / 1080f;
         move = "";
         logic = new Chess(game);
         board = new Chessboard(screen, Map.of(
@@ -77,7 +74,7 @@ public class GameScene extends Scene {
                     }
                 });
         buttons.add(
-                new Button(screen, "tetris", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
+                new Button(screen, "Music", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
                     final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
 
                     public void action() {
@@ -132,7 +129,6 @@ public class GameScene extends Scene {
         if (move.length() > 2)
             if (board.legalMovesFromPiece(move.substring(2), logic.legalMoves).size() != 0)
                 move = move.substring(2);
-
             else
                 move = "";
         for (Button button : buttons)
