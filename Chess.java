@@ -1,9 +1,8 @@
 import java.util.*;
 
-public class Chess implements Comparable<Chess> {
+public class Chess {
 
-
-    //Begin Static ROWS and FILES
+    // Begin Static ROWS and FILES
     static final long AFILE = 72340172838076673L;
     static final long HFILE = -9187201950435737472L;
     static final long ROW1 = -72057594037927936L;
@@ -11,7 +10,7 @@ public class Chess implements Comparable<Chess> {
     static final long ROW7 = 65280L;
     static final long ROW8 = 255L;
 
-    //Begin Piece Instances
+    // Begin Piece Instances
     long wP = 71776119061217280L;
     long wR = -9151314442816847872L;
     long wN = 4755801206503243776L;
@@ -25,8 +24,7 @@ public class Chess implements Comparable<Chess> {
     long bQ = 8L;
     long bK = 16L;
 
-
-    //Begin Move and FEN Lists
+    // Begin Move and FEN Lists
     Set<Short> legalMoves = new HashSet<>();
     Set<Short> psuedoLegalMoves = new HashSet<>();
     List<Short> allMovesMade = new ArrayList<>();
@@ -34,22 +32,20 @@ public class Chess implements Comparable<Chess> {
     List<String> fenList = new ArrayList<>();
     List<String> extraFenList = new ArrayList<>();
 
-
-    //Begin additional class variables
+    // Begin additional class variables
     boolean wKC = true;
     boolean wQC = true;
     boolean bKC = true;
     boolean bQC = true;
-    boolean turn; //keeps track current turn, "white" or "black"
-    byte enPassant = -1; //keeps track of current en passant square.
-    String fen; //stores fen of current board.
-    int halfMoveClock; //keeps track of moves since last capture or pawn push.
+    boolean turn; // keeps track current turn, "white" or "black"
+    byte enPassant = -1; // keeps track of current en passant square.
+    String fen; // stores fen of current board.
+    int halfMoveClock; // keeps track of moves since last capture or pawn push.
     int fullMoveNumber;
     boolean gameOver = false;
-    String result = ""; //result to be shown when game ends.
+    String result = ""; // result to be shown when game ends.
 
-
-    //Begin Constructors
+    // Begin Constructors
     public Chess() {
         setFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
@@ -60,12 +56,7 @@ public class Chess implements Comparable<Chess> {
         else
             setFromFEN(f);
     }
-/*
-    private Chess(String f, String shadow) {
-        if (!shadow.equals("filler text"))
-            simpleSetFromFEN(f);
-    }
-*/
+
     public Chess(Chess temp) {
         extraAllMovesMade = new ArrayList<>(temp.extraAllMovesMade);
         psuedoLegalMoves = new HashSet<>(temp.psuedoLegalMoves);
@@ -98,32 +89,18 @@ public class Chess implements Comparable<Chess> {
         fen = temp.fen;
     }
 
-
-    //Begin nextBoard Methods
+    // Begin nextBoard Methods
     public Chess nextBoard(short move) {
         Chess temp = new Chess(this);
         temp.makeMove(move);
         return temp;
     }
 
-    public int compareTo(Chess anotherChess) {
-        int runningTotal = 0;
-        if (fenList.size() != anotherChess.fenList.size())
-            return fenList.size() - anotherChess.fenList.size();
-        for (int i = 0; i < fenList.size(); i++)
-            runningTotal += fenList.get(i).compareTo(anotherChess.fenList.get(i));
-        return runningTotal;
-    }
-
-    public boolean equals(Chess anotherChess) {
-        return compareTo(anotherChess) == 0;
-    }
-
-    //Begin Move Methods
+    // Begin Move Methods
     public void makeMove(short m) {
         byte[] move = moveToByteArray(m);
-        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
-        char to = pieceAt(move[1]); //gets char for captured piece.
+        char from = pieceAt(move[0]); // gets char for origin piece. e.g. 'P'
+        char to = pieceAt(move[1]); // gets char for captured piece.
         // If no piece captured or capture is an en passant capture, will be ' '.
         enPassant = -1;
         if (from == 'P' && 47 < move[0] && move[0] < 56 && 31 < move[1] && move[1] < 40)
@@ -131,19 +108,25 @@ public class Chess implements Comparable<Chess> {
         if (from == 'p' && 7 < move[0] && move[0] < 16 && 23 < move[1] && move[1] < 32)
             enPassant = (byte) (move[1] - 8);
         simpleMove(m);
-        updateCastleRights(from, move[0]);
-        setHalfMoveClock(to, from); //sets HalfMoveClock accordingly
+        updateCastleRights(move);
+        setHalfMoveClock(to, from); // sets HalfMoveClock accordingly
         if (!turn)
-            fullMoveNumber++; //increment fullMoveNumber
+            fullMoveNumber++; // increment fullMoveNumber
         switch (move[3]) {
-            case 1 -> castleMove(move[1]); //move rook to proper position if move is castling
-            case 2 -> enPassantMove(move[1]); //capture pawn for en passant move
-            case 3 -> promotionMove(move[1], move[2]); //promotes pawn if on first of eighth rank.
+            case 1:
+                castleMove(move[1]); // move rook to proper position if move is castling
+                break;
+            case 2:
+                enPassantMove(move[1]); // capture pawn for en passant move
+                break;
+            case 3:
+                promotionMove(move[1], move[2]); // promotes pawn if on first of eighth rank.
+                break;
         }
         fen = fen();
-        allMovesMade.add(m); //add move made to allMovesMade
+        allMovesMade.add(m); // add move made to allMovesMade
         psuedoLegalMoves = getPsuedoLegalMoves();
-        legalMoves = getLegalMoves(); //update list of legal Moves
+        legalMoves = getLegalMoves(); // update list of legal Moves
         fenList.add(fen);
         extraAllMovesMade.clear();
         extraFenList.clear();
@@ -155,7 +138,7 @@ public class Chess implements Comparable<Chess> {
         allMovesMade.remove(allMovesMade.size() - 1);
         simpleSetFromFEN(fenList.get(fenList.size() - 1));
         psuedoLegalMoves = getPsuedoLegalMoves();
-        legalMoves = getLegalMoves(); //update list of legal Moves
+        legalMoves = getLegalMoves(); // update list of legal Moves
         gameOver = false;
         result = "";
         checkForGameOver();
@@ -180,39 +163,54 @@ public class Chess implements Comparable<Chess> {
     }
 
     public void simpleMove(short m) {
-        turn = !turn; //switch turn
+        turn = !turn; // switch turn
         byte[] move = moveToByteArray(m);
-        char from = pieceAt(move[0]); //gets char for origin piece. e.g. 'P'
-        char to = pieceAt(move[1]); //gets char for captured piece.
+        char from = pieceAt(move[0]); // gets char for origin piece. e.g. 'P'
+        char to = pieceAt(move[1]); // gets char for captured piece.
         if (to != ' ')
-            andPiece(to, ~boardBuilder(move[1])); //if piece at destination square, removes it
-        andPiece(from, ~boardBuilder(move[0])); //deletes moving piece from origin square
-        orPiece(from, boardBuilder(move[1])); //puts moving piece on destination square
+            andPiece(to, ~boardBuilder(move[1])); // if piece at destination square, removes it
+        andPiece(from, ~boardBuilder(move[0])); // deletes moving piece from origin square
+        orPiece(from, boardBuilder(move[1])); // puts moving piece on destination square
     }
 
-    public void updateCastleRights(char piece, byte move) {
-        if (piece == 'k') {
+    public void updateCastleRights(byte[] byteList) {
+        byte origin = byteList[0];
+        byte destination = byteList[1];
+        byte promotion = byteList[2];
+        byte flag = byteList[3];
+        char originPiece = pieceAt(origin);
+        char destinationPiece = pieceAt(destination);
+        if (originPiece == 'k') {
             bKC = bQC = false;
-            return;
         }
-        if (piece == 'K') {
+        if (originPiece == 'K') {
             wKC = wQC = false;
-            return;
         }
-        if (piece == 'r' || piece == 'R') {
-            if (bKC && move == 7) {
+        if (originPiece == 'r' || originPiece == 'R') {
+            if (bKC && origin == 7) {
                 bKC = false;
-                return;
             }
-            if (bQC && move == 0) {
+            if (bQC && origin == 0) {
                 bQC = false;
-                return;
             }
-            if (wKC && move == 63) {
+            if (wKC && origin == 63) {
                 wKC = false;
-                return;
             }
-            if (wQC && move == 56) {
+            if (wQC && origin == 56) {
+                wQC = false;
+            }
+        }
+        if (destinationPiece == 'r' || destinationPiece == 'R') {
+            if (bKC && destination == 7) {
+                bKC = false;
+            }
+            if (bQC && destination == 0) {
+                bQC = false;
+            }
+            if (wKC && destination == 63) {
+                wKC = false;
+            }
+            if (wQC && destination == 56) {
                 wQC = false;
             }
         }
@@ -243,74 +241,188 @@ public class Chess implements Comparable<Chess> {
         return res.substring(0, res.length() - 1);
     }
 
-
-    //Begin Piece Methods
+    // Begin Piece Methods
     public long pieces(char s) {
-        return switch (s) {
-            case 'P' -> wP;
-            case 'R' -> wR;
-            case 'N' -> wN;
-            case 'B' -> wB;
-            case 'Q' -> wQ;
-            case 'K' -> wK;
-            case 'p' -> bP;
-            case 'r' -> bR;
-            case 'n' -> bN;
-            case 'b' -> bB;
-            case 'q' -> bQ;
-            case 'k' -> bK;
-            default -> 0L;
-        };
+        switch (s) {
+            case 'P':
+                return wP;
+            case 'R':
+                return wR;
+            case 'N':
+                return wN;
+            case 'B':
+                return wB;
+            case 'Q':
+                return wQ;
+            case 'K':
+                return wK;
+            case 'p':
+                return bP;
+            case 'r':
+                return bR;
+            case 'n':
+                return bN;
+            case 'b':
+                return bB;
+            case 'q':
+                return bQ;
+            case 'k':
+                return bK;
+            default:
+                return 0L;
+        }
     }
 
     public void putPiece(char c, long l) {
         switch (c) {
-            case 'P' -> wP = l;
-            case 'R' -> wR = l;
-            case 'N' -> wN = l;
-            case 'B' -> wB = l;
-            case 'Q' -> wQ = l;
-            case 'K' -> wK = l;
-            case 'p' -> bP = l;
-            case 'r' -> bR = l;
-            case 'n' -> bN = l;
-            case 'b' -> bB = l;
-            case 'q' -> bQ = l;
-            case 'k' -> bK = l;
+            case 'P':
+                wP = l;
+                break;
+            case 'R':
+                wR = l;
+                break;
+
+            case 'N':
+                wN = l;
+                break;
+
+            case 'B':
+                wB = l;
+                break;
+
+            case 'Q':
+                wQ = l;
+                break;
+
+            case 'K':
+                wK = l;
+                break;
+
+            case 'p':
+                bP = l;
+                break;
+
+            case 'r':
+                bR = l;
+                break;
+
+            case 'n':
+                bN = l;
+                break;
+
+            case 'b':
+                bB = l;
+                break;
+
+            case 'q':
+                bQ = l;
+                break;
+
+            case 'k':
+                bK = l;
+                break;
         }
     }
 
     public void orPiece(char c, long l) {
         switch (c) {
-            case 'P' -> wP |= l;
-            case 'R' -> wR |= l;
-            case 'N' -> wN |= l;
-            case 'B' -> wB |= l;
-            case 'Q' -> wQ |= l;
-            case 'K' -> wK |= l;
-            case 'p' -> bP |= l;
-            case 'r' -> bR |= l;
-            case 'n' -> bN |= l;
-            case 'b' -> bB |= l;
-            case 'q' -> bQ |= l;
-            case 'k' -> bK |= l;
+            case 'P':
+                wP |= l;
+                break;
+            case 'R':
+                wR |= l;
+                break;
+
+            case 'N':
+                wN |= l;
+                break;
+
+            case 'B':
+                wB |= l;
+                break;
+
+            case 'Q':
+                wQ |= l;
+                break;
+
+            case 'K':
+                wK |= l;
+                break;
+
+            case 'p':
+                bP |= l;
+                break;
+
+            case 'r':
+                bR |= l;
+                break;
+
+            case 'n':
+                bN |= l;
+                break;
+
+            case 'b':
+                bB |= l;
+                break;
+
+            case 'q':
+                bQ |= l;
+                break;
+
+            case 'k':
+                bK |= l;
+                break;
         }
     }
 
     public void andPiece(char c, long l) {
         switch (c) {
-            case 'P' -> wP &= l;
-            case 'R' -> wR &= l;
-            case 'N' -> wN &= l;
-            case 'B' -> wB &= l;
-            case 'Q' -> wQ &= l;
-            case 'K' -> wK &= l;
-            case 'p' -> bP &= l;
-            case 'r' -> bR &= l;
-            case 'n' -> bN &= l;
-            case 'b' -> bB &= l;
-            case 'q' -> bQ &= l;
-            case 'k' -> bK &= l;
+            case 'P':
+                wP &= l;
+                break;
+            case 'R':
+                wR &= l;
+                break;
+
+            case 'N':
+                wN &= l;
+                break;
+
+            case 'B':
+                wB &= l;
+                break;
+
+            case 'Q':
+                wQ &= l;
+                break;
+
+            case 'K':
+                wK &= l;
+                break;
+
+            case 'p':
+                bP &= l;
+                break;
+
+            case 'r':
+                bR &= l;
+                break;
+
+            case 'n':
+                bN &= l;
+                break;
+
+            case 'b':
+                bB &= l;
+                break;
+
+            case 'q':
+                bQ &= l;
+                break;
+
+            case 'k':
+                bK &= l;
+                break;
         }
     }
 
@@ -345,32 +457,31 @@ public class Chess implements Comparable<Chess> {
             return 'k';
         return ' ';
     }
-/*
-    private void pieces_initializer() {
-        wP = 71776119061217280L;
-        wR = -9151314442816847872L;
-        wN = 4755801206503243776L;
-        wB = 2594073385365405696L;
-        wQ = 576460752303423488L;
-        wK = 1152921504606846976L;
-        bP = 65280L;
-        bR = 129L;
-        wN = 66L;
-        wB = 36L;
-        wQ = 8L;
-        wK = 16L;
-    }
-    */
+    /*
+     * private void pieces_initializer() {
+     * wP = 71776119061217280L;
+     * wR = -9151314442816847872L;
+     * wN = 4755801206503243776L;
+     * wB = 2594073385365405696L;
+     * wQ = 576460752303423488L;
+     * wK = 1152921504606846976L;
+     * bP = 65280L;
+     * bR = 129L;
+     * wN = 66L;
+     * wB = 36L;
+     * wQ = 8L;
+     * wK = 16L;
+     * }
+     */
 
-
-    //Begin FEN Methods
+    // Begin FEN Methods
     private String fen() {
         StringBuilder res = new StringBuilder();
         for (int i = 0; i < 8; i++) {
             int count = 0;
             for (int c = 0; c < 8; c++) {
                 char start = ' ';
-                for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
+                for (char s : new char[] { 'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k' }) {
                     if ((pieces(s) >>> (i * 8 + c) & 1) == 1L) {
                         start = s;
                     }
@@ -489,8 +600,7 @@ public class Chess implements Comparable<Chess> {
         return str[0] + " " + str[1] + " " + str[2] + " " + str[3];
     }
 
-
-    //Begin Move List Update Methods
+    // Begin Move List Update Methods
     public Set<Short> getPsuedoLegalMoves() {
         Set<Short> res = new HashSet<>();
         res.addAll(legalPawnMoves(turn ? 'P' : 'p'));
@@ -556,8 +666,14 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin MakeMove Helpers
+    public void printLegalMoves(){
+        System.out.print("[");
+        for(short move : legalMoves){
+            System.out.print(""+decodeMove(move) + ", ");
+        }
+        System.out.println("]");
+    }
+    // Begin MakeMove Helpers
     public void checkForGameOver() {
         if (legalMoves.size() == 0) {
             gameOver = true;
@@ -569,9 +685,9 @@ public class Chess implements Comparable<Chess> {
             }
             return;
         }
-        if (halfMoveClock == 50) {
+        if (halfMoveClock == 75) {
             gameOver = true;
-            result = "draw by 50 move rule!";
+            result = "draw by 75 move rule!";
             legalMoves.clear();
             return;
         }
@@ -621,24 +737,28 @@ public class Chess implements Comparable<Chess> {
 
     public void castleMove(byte destination) {
         if (destination == stringToByte("g1")) {
-            andPiece('R', 9223372036854775807L); //deletes rook from origin square
-            orPiece('R', 2305843009213693952L); //puts rook on destination square
+            andPiece('R', 9223372036854775807L); // deletes rook from origin square
+            orPiece('R', 2305843009213693952L); // puts rook on destination square
             wKC = false;
-        }
-        if (destination == stringToByte("c1")) {
-            andPiece('R', -72057594037927937L); //deletes rook from origin square
-            orPiece('R', boardBuilder("d1")); //puts rook on destination square
             wQC = false;
         }
+        if (destination == stringToByte("c1")) {
+            andPiece('R', -72057594037927937L); // deletes rook from origin square
+            orPiece('R', boardBuilder("d1")); // puts rook on destination square
+            wQC = false;
+            wKC = false;
+        }
         if (destination == stringToByte("g8")) {
-            andPiece('r', ~boardBuilder("h8")); //deletes rook from origin square
-            orPiece('r', boardBuilder("f8")); //puts rook on destination square
+            andPiece('r', ~boardBuilder("h8")); // deletes rook from origin square
+            orPiece('r', boardBuilder("f8")); // puts rook on destination square
             bKC = false;
+            bQC = false;
         }
         if (destination == stringToByte("c8")) {
-            andPiece('r', ~boardBuilder("a8")); //deletes rook from origin square
-            orPiece('r', boardBuilder("d8")); //puts rook on destination square
+            andPiece('r', ~boardBuilder("a8")); // deletes rook from origin square
+            orPiece('r', boardBuilder("d8")); // puts rook on destination square
             bQC = false;
+            bKC = false;
         }
     }
 
@@ -653,33 +773,48 @@ public class Chess implements Comparable<Chess> {
         if (destination < 32) {
             andPiece('P', ~boardBuilder(destination));
             switch (promote) {
-                case 0 -> orPiece('Q', boardBuilder(destination));
-                case 1 -> orPiece('N', boardBuilder(destination));
-                case 2 -> orPiece('R', boardBuilder(destination));
-                case 3 -> orPiece('B', boardBuilder(destination));
+                case 0:
+                    orPiece('Q', boardBuilder(destination));
+                    break;
+                case 1:
+                    orPiece('N', boardBuilder(destination));
+                    break;
+                case 2:
+                    orPiece('R', boardBuilder(destination));
+                    break;
+                case 3:
+                    orPiece('B', boardBuilder(destination));
+                    break;
             }
         } else {
             andPiece('p', ~boardBuilder(destination));
             switch (promote) {
-                case 0 -> orPiece('q', boardBuilder(destination));
-                case 1 -> orPiece('n', boardBuilder(destination));
-                case 2 -> orPiece('r', boardBuilder(destination));
-                case 3 -> orPiece('b', boardBuilder(destination));
+                case 0:
+                    orPiece('q', boardBuilder(destination));
+                    break;
+                case 1:
+                    orPiece('n', boardBuilder(destination));
+                    break;
+                case 2:
+                    orPiece('r', boardBuilder(destination));
+                    break;
+                case 3:
+                    orPiece('b', boardBuilder(destination));
+                    break;
             }
         }
     }
 
     public void setHalfMoveClock(char to, char from) {
         if (to != ' ')
-            halfMoveClock = 0; //reset clock due to capture
+            halfMoveClock = 0; // reset clock due to capture
         else if ((from == 'p') || (from == 'P'))
-            halfMoveClock = 0; //increment clock due to non-capture/non-pawn-push
+            halfMoveClock = 0; // increment clock due to non-capture/non-pawn-push
         else
-            halfMoveClock++; //reset clock due to pawn push
+            halfMoveClock++; // reset clock due to pawn push
     }
 
-
-    //Begin Board Modifier Methods
+    // Begin Board Modifier Methods
     public void reset() {
         fen = fenList.get(0);
         setFromFEN(fen);
@@ -689,7 +824,7 @@ public class Chess implements Comparable<Chess> {
         setFromFEN("8/8/8/8/8/8/8/8 w - - 0 1");
     }
 
-    //Begin Occupied Methods
+    // Begin Occupied Methods
     public Long whiteOccupied() {
         return pieces('P') | pieces('R') | pieces('N') | pieces('B') | pieces('Q') | pieces('K');
     }
@@ -701,7 +836,6 @@ public class Chess implements Comparable<Chess> {
     public long occupied() {
         return whiteOccupied() | blackOccupied();
     }
-
 
     // Begin Knight Methods
     public List<Short> legalKnightMoves(char c) {
@@ -726,8 +860,7 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin King Methods
+    // Begin King Methods
     public List<Short> legalKingMoves(char c) {
         List<Short> res = new ArrayList<>();
         long king = pieces(c);
@@ -777,8 +910,7 @@ public class Chess implements Comparable<Chess> {
         return false;
     }
 
-
-    //Begin Pawn Methods
+    // Begin Pawn Methods
     public List<Short> legalPawnMoves(char c) {
         List<Short> res = new ArrayList<>();
         boolean white = isWhite(c);
@@ -865,8 +997,7 @@ public class Chess implements Comparable<Chess> {
         return 0L;
     }
 
-
-    //Begin Bishop Methods
+    // Begin Bishop Methods
     public List<Short> legalBishopMoves(char c) {
         List<Short> res = new ArrayList<>();
         for (byte str : longToBytes(pieces(c))) {
@@ -918,8 +1049,7 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin Rook Methods
+    // Begin Rook Methods
     public List<Short> legalRookMoves(char c) {
         List<Short> res = new ArrayList<>();
         for (byte str : longToBytes(pieces(c))) {
@@ -971,8 +1101,7 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin Queen Methods
+    // Begin Queen Methods
     public List<Short> legalQueenMoves(char c) {
         List<Short> res = new ArrayList<>();
         res.addAll(legalRookMoves(c));
@@ -980,8 +1109,7 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin Boolean Methods
+    // Begin Boolean Methods
     public boolean inCheck() {
         char c = turn ? 'K' : 'k';
         long l = pieces(c);
@@ -1010,8 +1138,7 @@ public class Chess implements Comparable<Chess> {
         return (pieceAt(move[1]) != ' ') || move[2] == 2;
     }
 
-
-    //Begin Rolling Methods
+    // Begin Rolling Methods
     public void rollback() {
         if (fenList.size() == 1)
             return;
@@ -1026,7 +1153,6 @@ public class Chess implements Comparable<Chess> {
         fenList = tempFENList;
         allMovesMade = tempAllMovesMade;
     }
-
 
     public void rollForward() {
         if (extraFenList.size() == 0)
@@ -1055,8 +1181,7 @@ public class Chess implements Comparable<Chess> {
         return "";
     }
 
-
-    //Begin Print Methods
+    // Begin Print Methods
     public static void print(Object... args) {
 
         if (args.length == 1) {
@@ -1081,8 +1206,7 @@ public class Chess implements Comparable<Chess> {
         }
     }
 
-
-    //Begin Directional String Methods
+    // Begin Directional String Methods
     public static byte n(byte s) {
         if (s < 8)
             return -1;
@@ -1155,8 +1279,7 @@ public class Chess implements Comparable<Chess> {
         return sw(w(a));
     }
 
-
-    //Begin Directional Long Methods
+    // Begin Directional Long Methods
     public static long n(long a) {
         return a >>> 8 & ~ROW1;
     }
@@ -1221,8 +1344,7 @@ public class Chess implements Comparable<Chess> {
         return sw(w(a));
     }
 
-
-    //Begin boardBuilder Methods
+    // Begin boardBuilder Methods
     public static long boardBuilder(String a) {
         return boardBuilder(stringToByte(a));
     }
@@ -1235,7 +1357,6 @@ public class Chess implements Comparable<Chess> {
         return 1L << (move);
     }
 
-
     public static List<Byte> longToBytes(Long l) {
         List<Byte> res = new ArrayList<>();
         for (byte i = 0; i < 64; i++)
@@ -1244,18 +1365,25 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-
-    //Begin Decoding Methods
+    // Begin Decoding Methods
     public static String decodeMove(short move) {
         String origin = Chess.byteToString((byte) (63 & (move >>> 10)));
         String destination = Chess.byteToString((byte) (63 & (move >>> 4)));
         boolean isPromotion = (3 & (move)) == 3;
-        char promotion = switch (3 & (move >>> 2)) {
-            case 1 -> 'n';
-            case 2 -> 'r';
-            case 3 -> 'b';
-            default -> 'q';
-        };
+        char promotion;
+        switch (3 & (move >>> 2)) {
+            case 1:
+                promotion = 'n';
+                break;
+            case 2:
+                promotion = 'r';
+                break;
+            case 3:
+                promotion = 'b';
+                break;
+            default:
+                promotion = 'q';
+        }
         return origin + destination + (isPromotion ? promotion : "");
     }
 
@@ -1287,7 +1415,7 @@ public class Chess implements Comparable<Chess> {
         return res;
     }
 
-    //Begin Encoding Methods
+    // Begin Encoding Methods
     public static short encodeMove(byte origin, byte destination, byte promotion, byte flag) {
         return (short) ((origin << 10) | (destination << 4) | (promotion << 2) | flag);
     }
@@ -1310,12 +1438,20 @@ public class Chess implements Comparable<Chess> {
             flag = 2;
         if ((destination < 8 && pieceAt(origin) == 'P') || (55 < destination && pieceAt(origin) == 'p')) {
             flag = 3;
-            promotion = switch (move.charAt(4)) {
-                case 'n' -> 1;
-                case 'r' -> 2;
-                case 'b' -> 3;
-                default -> 0;
-            };
+            switch (move.charAt(4)) {
+                case 'n':
+                    promotion = 1;
+                    break;
+                case 'r':
+                    promotion = 2;
+                    break;
+                case 'b':
+                    promotion = 3;
+                    break;
+                default:
+                    promotion = 0;
+                    break;
+            }
         }
         return encodeMove(origin, destination, (byte) promotion, flag);
     }
@@ -1326,13 +1462,12 @@ public class Chess implements Comparable<Chess> {
         return (byte) (351 + str.charAt(0) - 8 * str.charAt(1));
     }
 
-
-    //Begin Visualisation Methods
+    // Begin Visualisation Methods
     public void drawBoard() {
-        print("\r\n8 | ", "");
+        System.out.print("\r\n╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻\r\n│");
         for (int k = 0; k < 64; k++) {
             char temp = ' ';
-            for (char s : new char[]{'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k'}) {
+            for (char s : new char[] { 'P', 'R', 'N', 'B', 'Q', 'K', 'p', 'r', 'n', 'b', 'q', 'k' }) {
                 if ((pieces(s) >>> k & 1) == 1L) {
                     temp = s;
                 }
@@ -1341,8 +1476,57 @@ public class Chess implements Comparable<Chess> {
             if ((k + 1) % 8 == 0 && (k != 63))
                 print("\r\n" + (7 - (k >>> 3)) + " | ", "");
         }
-        print("\r\n  -----------------");
+        System.out.println("\r\n╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹");
         print("    a b c d e f g h");
+    }
+
+    public static final char[][] PIECE_CHARS_UNICODE = new char[][] { { '♛', '♞', '♝', '♜', '♚', '♟', ' ' },
+            { '♕', '♘', '♗', '♖', '♔', '♙', '⚠' } }; // All empty squares will be white, ⚠ should never print
+
+    public char toUnicode(char c) {
+        switch (c) {
+            case 'Q':
+                return '♛';
+            case 'N':
+                return '♞';
+            case 'B':
+                return '♝';
+            case 'R':
+                return '♜';
+            case 'K':
+                return '♚';
+            case 'P':
+                return '♟';
+            case 'q':
+                return '♕';
+            case 'n':
+                return '♘';
+            case 'b':
+                return '♗';
+            case 'r':
+                return '♖';
+            case 'k':
+                return '♔';
+            case 'p':
+                return '♙';
+        }
+        return ' ';
+    }
+
+    public void print() {
+        boolean flag = false;
+        System.out.print("\r\n╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻⎯⎯⎯╻\r\n│");
+        for (int rank = 0; rank < 8; rank++) {
+            if (flag) {
+                System.out.print("\r\n│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│⎯⎯⎯│\r\n│");
+            }
+            flag = true;
+            for (int file = 0; file < 8; file++) {
+                char piece = toUnicode(pieceAt((byte) (8 * rank + file)));
+                System.out.print(" " + piece + " │");
+            }
+        }
+        System.out.println("\r\n╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹⎯⎯⎯╹");
     }
 
     public static void print_bitboard(long a) {
@@ -1355,6 +1539,19 @@ public class Chess implements Comparable<Chess> {
         }
         System.out.println("\r\n  -----------------");
         System.out.println("    a b c d e f g h");
+    }
+
+    public static void print(long input) {
+        for (long i = 63; i >= 0; i--) {
+            if (i % 8 == 7) {
+                System.out.println();
+            }
+            long index = 8 * (i / 8) + (7 - (i % 8));
+            System.out.print(" " + ((input >>> index) & 1l));
+        }
+        System.out.println();
+        System.out.println();
+
     }
 
     public long Perft(int depth, boolean print, Map<Short, Long> map) {
