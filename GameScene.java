@@ -5,9 +5,9 @@ import java.util.*;
 
 public class GameScene extends Scene {
 
-    Chessboard board; //handles graphics of board
-    Chess logic; //handles logic of Chess
-    String move; //keeps track of current move
+    Chessboard board; // handles graphics of board
+    Chess logic; // handles logic of Chess
+    String move; // keeps track of current move
     Stockfish fish = new Stockfish();
     Dogfish dog = new Dogfish();
     List<Button> buttons;
@@ -22,10 +22,10 @@ public class GameScene extends Scene {
         screen.setSize(1920, 1080);
         logic = new Chess(game);
         board = new Chessboard(screen, Map.of(
-                "data", "lichess", //datapack to use for images and sounds
-                "fen", logic.fen, //fen of board, should match up with logical board
-                "perspective", "white", //from who's perspective to view the board
-                "staticPerspective", true //whether or not perspective flips depending on who's turn it is
+                "data", "lichess", // datapack to use for images and sounds
+                "fen", logic.fen, // fen of board, should match up with logical board
+                "perspective", "white", // from who's perspective to view the board
+                "staticPerspective", true // whether or not perspective flips depending on who's turn it is
         ));
         buttons = new ArrayList<>();
         buttons.add(
@@ -38,7 +38,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, "reset", true, -50f, 50f, .8f, screen.loadImage("./data/buttons/reset.png")) {
                     public void action() {
-                     //   board.start.play();
+                        board.start.play();
                         dog.dog = new dogThread(null, 2, null);
                         logic.reset();
                         board.setFromFEN(logic.fen);
@@ -76,13 +76,13 @@ public class GameScene extends Scene {
                 });
         buttons.add(
                 new Button(screen, "Music", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
-                    //final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
+                     final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
 
                     public void action() {
-                     //   if (theme.isPlaying())
-                     //       theme.stop();
-                     //   else
-                     //       theme.loop(1, .1f);
+                         if (theme.isPlaying())
+                        theme.stop();
+                         else
+                         theme.loop(1, .1f);
                     }
                 });
         buttons.add(
@@ -117,7 +117,8 @@ public class GameScene extends Scene {
                 board.showCheck();
             if (logic.gameOver) {
                 buttons.add(
-                        new Button(screen, "result", true, 755f, 435f, .8f, screen.loadImage("./data/results/" + logic.result + ".png")) {
+                        new Button(screen, "result", true, 755f, 435f, .8f,
+                                screen.loadImage("./data/results/" + logic.result + ".png")) {
                             public void action() {
                             }
                         });
@@ -167,7 +168,6 @@ public class GameScene extends Scene {
             return "";
         return res;
     }
-
 
     public String randomMove() {
         List<Short> temp = new ArrayList<>(logic.legalMoves);

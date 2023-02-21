@@ -2,26 +2,23 @@ import processing.core.*;
 import java.util.*;
 
 public class SceneSwitcher extends PApplet {
-    
-    List<Scene> sceneList;
-    static public void main(String[] passedArgs) {
-        try {
-            String[] appletArgs = new String[]{"--present", "--window-color=#666666", "--stop-color=#cccccc", "SceneSwitcher"};
-            if (passedArgs != null) {
-                PApplet.main(concat(appletArgs, passedArgs));
-            } else {
-                PApplet.main(appletArgs);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
+    static List<Scene> sceneList = new ArrayList<>();
+
+    static public void begin() {
+        PApplet.main(new String[] { "--present", "--window-color=#666666", "--stop-color=#cccccc",
+                "SceneSwitcher" });
+    }
+
+    public static void addScene(Scene scene) {
+        sceneList.add(scene);
     }
 
     public void settings() {
-        sceneList = new ArrayList<>();
-        sceneList.add(new GameScene(this, "Chess Game", true));
-        for (Scene scn : sceneList)
+        for (Scene scn : sceneList) {
+            scn.screen = this;
             scn.settings();
+        }
     }
 
     public void draw() {
