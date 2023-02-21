@@ -1,13 +1,14 @@
+import processing.core.PApplet;
 import processing.core.PImage;
 
 public abstract class Scene {
-    public SceneSwitcher screen;
+    public PApplet screen;
     private final String id;
     private boolean active;
     private PImage image;
     private boolean initialized;
 
-    public Scene(SceneSwitcher app, String str, boolean bn) {
+    public Scene(PApplet app, String str, boolean bn) {
         screen = app;
         id = str;
         active = bn;

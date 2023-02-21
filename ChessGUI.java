@@ -3,7 +3,7 @@ import processing.sound.SoundFile;
 
 import java.util.*;
 
-public class GameScene extends Scene {
+public class ChessGUI extends Scene {
 
     Chessboard board; // handles graphics of board
     Chess logic; // handles logic of Chess
@@ -13,20 +13,24 @@ public class GameScene extends Scene {
     List<Button> buttons;
     String game = "";
 
-    public GameScene(SceneSwitcher app, String str, boolean bn) {
+    public ChessGUI(SceneSwitcher app, String str, boolean bn) {
         super(app, str, bn);
     }
 
     public void settings() {
         move = "";
         screen.setSize(1920, 1080);
-        logic = new Chess(game);
+        logic = new Chess();
         board = new Chessboard(screen, Map.of(
                 "data", "lichess", // datapack to use for images and sounds
                 "fen", logic.fen, // fen of board, should match up with logical board
                 "perspective", "white", // from who's perspective to view the board
                 "staticPerspective", true // whether or not perspective flips depending on who's turn it is
         ));
+        addButtons();
+    }
+
+    public void addButtons() {
         buttons = new ArrayList<>();
         buttons.add(
                 new Button(screen, "flip", true, 50f, 50f, .8f, screen.loadImage("./data/buttons/flip.png")) {
@@ -76,13 +80,13 @@ public class GameScene extends Scene {
                 });
         buttons.add(
                 new Button(screen, "Music", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
-                     final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
+                    final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
 
                     public void action() {
-                         if (theme.isPlaying())
-                        theme.stop();
-                         else
-                         theme.loop(1, .1f);
+                        if (theme.isPlaying())
+                            theme.stop();
+                        else
+                            theme.loop(1, .1f);
                     }
                 });
         buttons.add(
