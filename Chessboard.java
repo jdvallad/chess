@@ -1,7 +1,7 @@
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PImage;
-//import processing.sound.*;
+import processing.sound.*;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -10,14 +10,14 @@ public class Chessboard {
     PApplet screen;
     PImage[] images;
     char[][] pieceBoard = new char[8][8];
-    //SoundFile start;
-    //SoundFile end;
-    //SoundFile moveSound;
-    //SoundFile capture;
-    //SoundFile error;
-    //SoundFile check;
-    //SoundFile castle;
-    //SoundFile promotion;
+    SoundFile start;
+    SoundFile end;
+    SoundFile moveSound;
+    SoundFile capture;
+    SoundFile error;
+    SoundFile check;
+    SoundFile castle;
+    SoundFile promotion;
     String perspective; // changes the orientation of the board
     boolean staticPerspective; // determines whether perspective will be changed when a move is made
     String data;
@@ -61,14 +61,14 @@ public class Chessboard {
 
     public void settings() {
         images = new PImage[19];
-        //start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
-        //end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
-        //moveSound = new SoundFile(screen, "./data/" + data + "/sounds/move.mp3");
-        //capture = new SoundFile(screen, "./data/" + data + "/sounds/capture.mp3");
-        //error = new SoundFile(screen, "./data/" + data + "/sounds/error.mp3");
-       // check = new SoundFile(screen, "./data/" + data + "/sounds/check.mp3");
-       // castle = new SoundFile(screen, "./data/" + data + "/sounds/castle.mp3");
-       // promotion = new SoundFile(screen, "./data/" + data + "/sounds/promotion.mp3");
+        start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
+        end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
+        moveSound = new SoundFile(screen, "./data/" + data + "/sounds/move.mp3");
+       capture = new SoundFile(screen, "./data/" + data + "/sounds/capture.mp3");
+        error = new SoundFile(screen, "./data/" + data + "/sounds/error.mp3");
+        check = new SoundFile(screen, "./data/" + data + "/sounds/check.mp3");
+        castle = new SoundFile(screen, "./data/" + data + "/sounds/castle.mp3");
+        promotion = new SoundFile(screen, "./data/" + data + "/sounds/promotion.mp3");
         images[0] = screen.loadImage("./data/" + data + "/images/wK.png");
         images[1] = screen.loadImage("./data/" + data + "/images/bK.png");
         images[2] = screen.loadImage("./data/" + data + "/images/wQ.png");
@@ -98,22 +98,22 @@ public class Chessboard {
     public void playSound(String moveType) {
         switch (moveType.split("-")[0]) {
             case "gameOver":
-             //   end.play();
+                end.play();
                 return;
             case "check":
-             //   check.play();
+                check.play();
                 return;
             case "capture":
-             //   capture.play();
+                capture.play();
                 return;
             case "castle":
-            //    castle.play();
+                castle.play();
                 return;
             case "promotion":
-             //   promotion.play();
+                promotion.play();
                 return;
             case "move":
-             //   moveSound.play();
+                moveSound.play();
                 return;
             default:
         }

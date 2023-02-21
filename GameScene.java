@@ -1,5 +1,5 @@
 import processing.core.PConstants;
-//import processing.sound.SoundFile;
+import processing.sound.SoundFile;
 
 import java.util.*;
 
@@ -96,7 +96,7 @@ public class GameScene extends Scene {
 
     public void draw() {
         if (!isInitialized()) {
-           // board.start.play();
+            board.start.play();
             board.setFromFEN(logic.fen);
             snap();
             initialize();

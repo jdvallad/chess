@@ -5,7 +5,6 @@ public class SceneSwitcher extends PApplet {
     
     List<Scene> sceneList;
     static public void main(String[] passedArgs) {
-        //com.sun.javafx.application.PlatformImpl.startup(() -> { });
         try {
             String[] appletArgs = new String[]{"--present", "--window-color=#666666", "--stop-color=#cccccc", "SceneSwitcher"};
             if (passedArgs != null) {
