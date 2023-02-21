@@ -1,8 +1,7 @@
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PImage;
-import processing.sound.SoundFile;
-
+//import processing.sound.*;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -11,16 +10,16 @@ public class Chessboard {
     PApplet screen;
     PImage[] images;
     char[][] pieceBoard = new char[8][8];
-    SoundFile start;
-    SoundFile end;
-    SoundFile moveSound;
-    SoundFile capture;
-    SoundFile error;
-    SoundFile check;
-    SoundFile castle;
-    SoundFile promotion;
-    String perspective; //changes the orientation of the board
-    boolean staticPerspective; //determines whether perspective will be changed when a move is made
+    //SoundFile start;
+    //SoundFile end;
+    //SoundFile moveSound;
+    //SoundFile capture;
+    //SoundFile error;
+    //SoundFile check;
+    //SoundFile castle;
+    //SoundFile promotion;
+    String perspective; // changes the orientation of the board
+    boolean staticPerspective; // determines whether perspective will be changed when a move is made
     String data;
     String turn;
     String fen;
@@ -29,7 +28,7 @@ public class Chessboard {
         screen = app;
         data = (String) parameters.get("data");
         fen = (String) parameters.get("fen");
-        if(fen.equals(""))
+        if (fen.equals(""))
             fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
@@ -48,7 +47,7 @@ public class Chessboard {
     public void setFromParameters(Map<String, Object> parameters) {
         data = (String) parameters.get("data");
         fen = (String) parameters.get("fen");
-        if(fen.equals(""))
+        if (fen.equals(""))
             fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
@@ -62,14 +61,14 @@ public class Chessboard {
 
     public void settings() {
         images = new PImage[19];
-        start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
-        end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
-        moveSound = new SoundFile(screen, "./data/" + data + "/sounds/move.mp3");
-        capture = new SoundFile(screen, "./data/" + data + "/sounds/capture.mp3");
-        error = new SoundFile(screen, "./data/" + data + "/sounds/error.mp3");
-        check = new SoundFile(screen, "./data/" + data + "/sounds/check.mp3");
-        castle = new SoundFile(screen, "./data/" + data + "/sounds/castle.mp3");
-        promotion = new SoundFile(screen, "./data/" + data + "/sounds/promotion.mp3");
+        //start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
+        //end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
+        //moveSound = new SoundFile(screen, "./data/" + data + "/sounds/move.mp3");
+        //capture = new SoundFile(screen, "./data/" + data + "/sounds/capture.mp3");
+        //error = new SoundFile(screen, "./data/" + data + "/sounds/error.mp3");
+       // check = new SoundFile(screen, "./data/" + data + "/sounds/check.mp3");
+       // castle = new SoundFile(screen, "./data/" + data + "/sounds/castle.mp3");
+       // promotion = new SoundFile(screen, "./data/" + data + "/sounds/promotion.mp3");
         images[0] = screen.loadImage("./data/" + data + "/images/wK.png");
         images[1] = screen.loadImage("./data/" + data + "/images/bK.png");
         images[2] = screen.loadImage("./data/" + data + "/images/wQ.png");
@@ -91,7 +90,6 @@ public class Chessboard {
         images[18] = screen.loadImage("./data/" + data + "/images/dark_square.png");
     }
 
-
     public void tintScreen() {
         screen.fill(30, 80);
         screen.rect(0, 0, 1920, 1080);
@@ -100,22 +98,22 @@ public class Chessboard {
     public void playSound(String moveType) {
         switch (moveType.split("-")[0]) {
             case "gameOver":
-                end.play();
+             //   end.play();
                 return;
             case "check":
-                check.play();
+             //   check.play();
                 return;
             case "capture":
-                capture.play();
+             //   capture.play();
                 return;
             case "castle":
-                castle.play();
+            //    castle.play();
                 return;
             case "promotion":
-                promotion.play();
+             //   promotion.play();
                 return;
             case "move":
-                moveSound.play();
+             //   moveSound.play();
                 return;
             default:
         }
@@ -126,7 +124,7 @@ public class Chessboard {
             return;
         }
         if (holdingPiece(move))
-            drawFloatingPiece(move); //This will render piece held as floating
+            drawFloatingPiece(move); // This will render piece held as floating
     }
 
     public void setFromFEN(String f) {
@@ -175,7 +173,8 @@ public class Chessboard {
         int x = (int) ((((screen.mouseY)) - 28) / (128));
         int y = (int) ((((screen.mouseX)) - 448) / (128));
         if (perspective.equals("black"))
-            return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0) && (pieceBoard[7 - x][7 - y] != ' ');
+            return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0)
+                    && (pieceBoard[7 - x][7 - y] != ' ');
         else
             return mouseOnBoard() && ((!screen.mousePressed) && move.length() == 0) && (pieceBoard[x][y] != ' ');
     }
@@ -185,7 +184,8 @@ public class Chessboard {
     }
 
     public boolean mouseOnBoard() {
-        return 448 < ((screen.mouseX)) && ((screen.mouseX)) < 1472  && 28 < ((screen.mouseY)) && ((screen.mouseY)) < 1052;
+        return 448 < ((screen.mouseX)) && ((screen.mouseX)) < 1472 && 28 < ((screen.mouseY))
+                && ((screen.mouseY)) < 1052;
     }
 
     public void showCheck() {
@@ -227,7 +227,7 @@ public class Chessboard {
             char xFile = (char) (97 + x);
             int yRank = 8 - y;
             if ((move.equals("" + xFile + yRank))) {
-                //move = "";
+                // move = "";
             } else {
                 move += "" + xFile + yRank;
             }
@@ -249,7 +249,7 @@ public class Chessboard {
         screen.rect(447 + 128 * x, 27 + 128 * y, 128, 128);
     }
 
-    public String startMoveOnMousePress(String m,boolean check) {
+    public String startMoveOnMousePress(String m, boolean check) {
         if (mouseOnBoard() && screen.mouseButton == PConstants.LEFT) {
             String move = m;
             int x = (int) ((((screen.mouseX)) - 448) / (128));
@@ -288,11 +288,10 @@ public class Chessboard {
         }
     }
 
-    public void drawLastMove(String lastMove)
-    {
+    public void drawLastMove(String lastMove) {
         if (lastMove.length() == 0)
             return;
-        if(lastMove.substring(0, 2).equals(lastMove.substring(2)))
+        if (lastMove.substring(0, 2).equals(lastMove.substring(2)))
             return;
         screen.fill(250, 247, 39, 30);
         screen.strokeWeight(0);
@@ -310,22 +309,36 @@ public class Chessboard {
         screen.rect(447 + 128 * c, 27 + 128 * d, 128, 128);
     }
 
-
     private int convertFileToInt(char c) {
         return ((int) c) - 97;
     }
 
     public void drawPiece(int r, int c) {
         String name = ("" + pieceBoard[r][c]);
-        int temp = switch (name.toLowerCase()) {
-            case "q" -> 2;
-            case "r" -> 4;
-            case "b" -> 6;
-            case "n" -> 8;
-            case "p" -> 10;
-            case "k" -> 0;
-            default -> -1;
-        };
+        int temp;
+        switch (name.toLowerCase()) {
+            case "q":
+                temp = 2;
+                break;
+            case "r":
+                temp = 4;
+                break;
+            case "b":
+                temp = 6;
+                break;
+            case "n":
+                temp = 8;
+                break;
+            case "p":
+                temp = 10;
+                break;
+            case "k":
+                temp = 0;
+                break;
+            default:
+                temp = -1;
+                break;
+        }
         if (temp == -1) {
             return;
         }
@@ -350,15 +363,30 @@ public class Chessboard {
             r = 7 - r;
             c = 7 - c;
         }
-        int temp = switch (name.toLowerCase()) {
-            case "q" -> 2;
-            case "r" -> 4;
-            case "b" -> 6;
-            case "n" -> 8;
-            case "p" -> 10;
-            case "k" -> 0;
-            default -> -1;
-        };
+        int temp;
+        switch (name.toLowerCase()) {
+            case "q":
+                temp = 2;
+                break;
+            case "r":
+                temp = 4;
+                break;
+            case "b":
+                temp = 6;
+                break;
+            case "n":
+                temp = 8;
+                break;
+            case "p":
+                temp = 10;
+                break;
+            case "k":
+                temp = 0;
+                break;
+            default:
+                temp = -1;
+                break;
+        }
         if (temp == -1) {
             return;
         }
@@ -377,15 +405,30 @@ public class Chessboard {
             return;
         screen.tint(180);
         String name = "" + piece;
-        int temp = switch (name.toLowerCase()) {
-            case "q" -> 2;
-            case "r" -> 4;
-            case "b" -> 6;
-            case "n" -> 8;
-            case "p" -> 10;
-            case "k" -> 0;
-            default -> -1;
-        };
+        int temp;
+        switch (name.toLowerCase()) {
+            case "q":
+                temp = 2;
+                break;
+            case "r":
+                temp = 4;
+                break;
+            case "b":
+                temp = 6;
+                break;
+            case "n":
+                temp = 8;
+                break;
+            case "p":
+                temp = 10;
+                break;
+            case "k":
+                temp = 0;
+                break;
+            default:
+                temp = -1;
+                break;
+        }
         if (temp == -1) {
             return;
         }
@@ -411,7 +454,7 @@ public class Chessboard {
     public void drawLegalMovesFromPiece(String location, Set<Short> legalMoves) {
         if (location.equals("")) {
             int x = (int) ((((screen.mouseX)) - 448) / 128);
-            int y = (int) ((((screen.mouseY)) - 28 ) / 128);
+            int y = (int) ((((screen.mouseY)) - 28) / 128);
             if (perspective.equals("black")) {
                 x = 7 - x;
                 y = 7 - y;
@@ -426,7 +469,7 @@ public class Chessboard {
             int r1 = 8 - Integer.parseInt("" + str.charAt(3));
             int c1 = convertFileToInt(str.charAt(2));
             int x = (int) ((((screen.mouseX)) - 448) / 128);
-            int y = (int) ((((screen.mouseY)) - 28 ) / 128);
+            int y = (int) ((((screen.mouseY)) - 28) / 128);
             if (perspective.equals("black")) {
                 r1 = 7 - r1;
                 c1 = 7 - c1;

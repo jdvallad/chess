@@ -1,13 +1,11 @@
 import processing.core.*;
-
 import java.util.*;
 
 public class SceneSwitcher extends PApplet {
     
     List<Scene> sceneList;
     static public void main(String[] passedArgs) {
-        com.sun.javafx.application.PlatformImpl.startup(() -> {
-        });
+        //com.sun.javafx.application.PlatformImpl.startup(() -> { });
         try {
             String[] appletArgs = new String[]{"--present", "--window-color=#666666", "--stop-color=#cccccc", "SceneSwitcher"};
             if (passedArgs != null) {
@@ -21,7 +19,6 @@ public class SceneSwitcher extends PApplet {
     }
 
     public void settings() {
-        size(displayWidth, displayHeight);
         sceneList = new ArrayList<>();
         sceneList.add(new GameScene(this, "Chess Game", true));
         for (Scene scn : sceneList)

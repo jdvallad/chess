@@ -176,8 +176,6 @@ public class Chess {
     public void updateCastleRights(byte[] byteList) {
         byte origin = byteList[0];
         byte destination = byteList[1];
-        byte promotion = byteList[2];
-        byte flag = byteList[3];
         char originPiece = pieceAt(origin);
         char destinationPiece = pieceAt(destination);
         if (originPiece == 'k') {

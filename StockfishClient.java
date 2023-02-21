@@ -29,22 +29,29 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class StockfishClient {
     private final Queue<Stockfish> engines;
 
-    public StockfishClient(String path, int instances, Variant variant, Set<Option> options) throws StockfishInitException {
-       // ExecutorService executor = Executors.newFixedThreadPool(instances);
-       // ExecutorService callback = Executors.newSingleThreadExecutor();
+    public StockfishClient(String path, int instances, Variant variant, Set<Option> options)
+            throws StockfishInitException {
+        // ExecutorService executor = Executors.newFixedThreadPool(instances);
+        // ExecutorService callback = Executors.newSingleThreadExecutor();
         engines = new ArrayBlockingQueue<>(instances);
 
         for (int i = 0; i < instances; i++)
             engines.add(new Stockfish(path, variant, options.toArray(new Option[0])));
     }
+
     public String submit(Query query) {
         Stockfish engine = engines.peek();
-        return switch (query.getType()) {
-            case Best_Move -> engine.getBestMove(query);
-            case Make_Move -> engine.makeMove(query);
-            case Legal_Moves -> engine.getLegalMoves(query);
-            case Checkers -> engine.getCheckers(query);
-        };
+        switch (query.getType()) {
+            case Best_Move:
+                return engine.getBestMove(query);
+            case Make_Move:
+                return engine.makeMove(query);
+            case Legal_Moves:
+                return engine.getLegalMoves(query);
+            case Checkers:
+                return engine.getCheckers(query);
+        }
+        return null;
     }
 
     public static class Builder {

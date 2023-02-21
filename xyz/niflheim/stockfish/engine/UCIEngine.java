@@ -93,26 +93,34 @@ abstract class UCIEngine {
     }
 
     private String getPath(Variant variant, String override) {
-        StringBuilder path = new StringBuilder(override == null ? "./engines/stockfish_10_x64" : override + "stockfish_10_x64");
+        StringBuilder path = new StringBuilder(
+                override == null ? "./engines/stockfish_10_x64" : override + "stockfish_10_x64");
         if (System.getProperty("os.name").toLowerCase().contains("win"))
             switch (variant) {
-                case DEFAULT -> path.append(".exe");
-                case BMI2 -> path.append("_bmi2.exe");
-                case POPCNT -> path.append("_popcnt.exe");
-                default -> throw new StockfishEngineException("Illegal variant provided.");
+                case DEFAULT:
+                    path.append(".exe");
+                    break;
+                case BMI2:
+                    path.append("_bmi2.exe");
+                    break;
+                case POPCNT:
+                    path.append("_popcnt.exe");
+                    break;
+                default:
+                    throw new StockfishEngineException("Illegal variant provided.");
             }
         else
             switch (variant) {
                 case DEFAULT:
-                break;
+                    break;
                 case BMI2:
-                path.append("_bmi2");
-                break;
+                    path.append("_bmi2");
+                    break;
                 case MODERN:
-                path.append("_modern");
-                break;
+                    path.append("_modern");
+                    break;
                 default:
-                throw new StockfishEngineException("Illegal variant provided.");
+                    throw new StockfishEngineException("Illegal variant provided.");
             }
 
         return path.toString();

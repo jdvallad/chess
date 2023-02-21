@@ -1,5 +1,5 @@
 import processing.core.PConstants;
-import processing.sound.SoundFile;
+//import processing.sound.SoundFile;
 
 import java.util.*;
 
@@ -19,6 +19,7 @@ public class GameScene extends Scene {
 
     public void settings() {
         move = "";
+        screen.setSize(1920, 1080);
         logic = new Chess(game);
         board = new Chessboard(screen, Map.of(
                 "data", "lichess", //datapack to use for images and sounds
@@ -37,7 +38,7 @@ public class GameScene extends Scene {
         buttons.add(
                 new Button(screen, "reset", true, -50f, 50f, .8f, screen.loadImage("./data/buttons/reset.png")) {
                     public void action() {
-                        board.start.play();
+                     //   board.start.play();
                         dog.dog = new dogThread(null, 2, null);
                         logic.reset();
                         board.setFromFEN(logic.fen);
@@ -75,13 +76,13 @@ public class GameScene extends Scene {
                 });
         buttons.add(
                 new Button(screen, "Music", true, 50f, 550f, .8f, screen.loadImage("./data/buttons/tetris.png")) {
-                    final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
+                    //final SoundFile theme = new SoundFile(screen, "./data/music/Tetris.mp3");
 
                     public void action() {
-                        if (theme.isPlaying())
-                            theme.stop();
-                        else
-                            theme.loop(1, .1f);
+                     //   if (theme.isPlaying())
+                     //       theme.stop();
+                     //   else
+                     //       theme.loop(1, .1f);
                     }
                 });
         buttons.add(
@@ -95,7 +96,7 @@ public class GameScene extends Scene {
 
     public void draw() {
         if (!isInitialized()) {
-            board.start.play();
+           // board.start.play();
             board.setFromFEN(logic.fen);
             snap();
             initialize();

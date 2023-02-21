@@ -49,14 +49,22 @@ public class StockfishClient {
     public void submit(Query query, Consumer<String> result) {
         executor.submit(() -> {
             Stockfish engine = engines.remove();
-            String output = switch (query.getType()) {
-                case Best_Move -> engine.getBestMove(query);
-                case Make_Move -> engine.makeMove(query);
-                case Legal_Moves -> engine.getLegalMoves(query);
-                case Checkers -> engine.getCheckers(query);
-            };
-
-            callback.submit(() -> result.accept(output));
+            String[] output = {null};
+            switch (query.getType()) {
+                case Best_Move:
+                output[0] = engine.getBestMove(query);
+                break;
+                case Make_Move:
+                output[0] = engine.makeMove(query);
+                break;
+                case Legal_Moves:
+                output[0] = engine.getLegalMoves(query);
+                break;
+                case Checkers:
+                output[0] = engine.getCheckers(query);
+                break;
+            }
+            callback.submit(() -> result.accept(output[0]));
             engines.add(engine);
         });
     }
