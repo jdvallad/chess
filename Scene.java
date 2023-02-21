@@ -2,19 +2,22 @@ import processing.core.PApplet;
 import processing.core.PImage;
 
 public abstract class Scene {
-    public PApplet screen;
+    protected PApplet screen;
     private final String id;
     private boolean active;
     private PImage image;
     private boolean initialized;
 
-    public Scene(PApplet app, String str, boolean bn) {
-        screen = app;
-        id = str;
-        active = bn;
+    public Scene(String sceneID, boolean isActive) {
+        screen = null;
+        id = sceneID;
+        active = isActive;
         initialized = false;
     }
 
+    public void setScreen(PApplet screen){
+        this.screen = screen;
+    }
     public String getId() {
         return id;
     }

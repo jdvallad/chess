@@ -1,10 +1,9 @@
 import processing.core.PConstants;
 import processing.core.PImage;
 import processing.sound.SoundFile;
-
 import java.util.*;
 
-public class ChessGUI extends Scene {
+public class ChessScene extends Scene {
     PImage[] images;
     char[][] pieceBoard = new char[8][8];
     SoundFile start;
@@ -20,30 +19,31 @@ public class ChessGUI extends Scene {
     String data;
     String turn;
     String fen;
-    Chess logic; // handles logic of Chess
+    // Chess logic; // handles logic of Chess
+    public Chess game;
     String move; // keeps track of current move
-    Stockfish fish = new Stockfish();
-    Dogfish dog = new Dogfish();
     List<Button> buttons;
-    String game = "";
-    Map<String, Object> parameters;
+    static Map<String, Object> defaultParameters = Map.of(
+            "data", "lichess", // datapack to use for images and sounds
+            "fen", "",
+            "perspective", "white",
+            "staticPerspective", true // whether or not perspective flips depending on who's turn it is
+    );
 
-    public ChessGUI(SceneSwitcher app, String str, boolean bn, Map<String, Object> parameters) {
-        super(app, str, bn);
+    public ChessScene(Chess game, String sceneID, boolean isActive,
+            Map<String, Object> parameters) {
+        super(sceneID, isActive);
+        this.game = game;
+        setFromParameters(parameters);
+    }
 
-        this.parameters = parameters;
+    public ChessScene(Chess game, String sceneID, boolean isActive) {
+        this(game, sceneID, isActive, defaultParameters);
     }
 
     public void settings() {
         move = "";
         screen.setSize(1920, 1080);
-        logic = new Chess();
-        data = (String) parameters.get("data");
-        fen = (String) parameters.get("fen");
-        if (fen.equals(""))
-            fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        perspective = (String) parameters.get("perspective");
-        staticPerspective = (boolean) parameters.get("staticPerspective");
         images = new PImage[19];
         start = new SoundFile(screen, "./data/" + data + "/sounds/start.mp3");
         end = new SoundFile(screen, "./data/" + data + "/sounds/end.mp3");
@@ -75,7 +75,6 @@ public class ChessGUI extends Scene {
         addButtons();
     }
 
- 
     public void addButtons() {
         buttons = new ArrayList<>();
         buttons.add(
@@ -89,9 +88,9 @@ public class ChessGUI extends Scene {
                 new Button(screen, "reset", true, -50f, 50f, .8f, screen.loadImage("./data/buttons/reset.png")) {
                     public void action() {
                         start.play();
-                        dog.dog = new dogThread(null, 2, null);
-                        logic.reset();
-                        setFromFEN(logic.fen);
+                        // dog.dog = new dogThread(null, 2, null);
+                        game.reset();
+                        setFromFEN(game.getFen());
                         for (Button button : buttons) {
                             if (button.getId().equals("result")) {
                                 button.deactivate();
@@ -104,9 +103,11 @@ public class ChessGUI extends Scene {
         buttons.add(
                 new Button(screen, "back", true, 50f, -50f, .8f, screen.loadImage("./data/buttons/back.png")) {
                     public void action() {
-                        dog.dog = new dogThread(null, 2, null);
-                        playSound(logic.rollback(2));
-                        setFromFEN(logic.fen);
+                        // dog.dog = new dogThread(null, 2, null);
+                        // playSound(logic.rollback(2));
+                        game.undo();
+                        game.undo();
+                        setFromFEN(game.getFen());
                         for (Button button : buttons) {
                             if (button.getId().equals("result")) {
                                 button.deactivate();
@@ -135,32 +136,34 @@ public class ChessGUI extends Scene {
                     }
                 });
     }
-   
+
     public void draw() {
         if (!isInitialized()) {
             start.play();
-            setFromFEN(logic.fen);
+            setFromFEN(game.getFen());
             snap();
             initialize();
             return;
         }
         refresh();
-        move = getMove(move, "human", "dog,1");
+        if (game.turn == Chess.BLACK) {
+            move = randomMove();
+        }
         drawMove(move);
-        drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), logic.legalMoves);
-        drawLastMove(Chess.decodeMove(logic.lastMove()));
-        if (move.length() > 2 && logic.legalMoves.contains(logic.encodeMove(move))) {
-            String moveType = logic.moveType(logic.encodeMove(move));
-            playSound(moveType);
-            logic.makeMove(logic.encodeMove(move));
+        drawLegalMovesFromPiece(move.length() == 0 ? "" : move.substring(0, 2), game.legalMoves);
+        drawLastMove(game.getLastMove());
+        if (move.length() > 2 && game.legalMoves.contains(move)) {
+            // String moveType = logic.moveType(logic.encodeMove(move));
+            // playSound(moveType);
+            game.move(move);
             move = "";
-            setFromFEN(logic.fen);
-            if (logic.inCheck())
+            setFromFEN(game.getFen());
+            if (game.inCheck())
                 showCheck();
-            if (logic.gameOver) {
+            if (game.gameOver) {
                 buttons.add(
                         new Button(screen, "result", true, 755f, 435f, .8f,
-                                screen.loadImage("./data/results/" + logic.result + ".png")) {
+                                screen.loadImage("./data/results/" + game.gameResult + ".png")) {
                             public void action() {
                             }
                         });
@@ -171,7 +174,7 @@ public class ChessGUI extends Scene {
             snap();
         }
         if (move.length() > 2)
-            if (legalMovesFromPiece(move.substring(2), logic.legalMoves).size() != 0)
+            if (legalMovesFromPiece(move.substring(2), game.legalMoves).size() != 0)
                 move = move.substring(2);
             else
                 move = "";
@@ -179,58 +182,22 @@ public class ChessGUI extends Scene {
             button.update();
     }
 
-    public String getMove(String move, String white, String black) {
-        String[] w = white.replaceAll("\\s", "").split(",");
-        String[] b = black.replaceAll("\\s", "").split(",");
-        if (logic.turn) {
-            if (w[0].equals("stock"))
-                return stockMove(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
-            if (w[0].equals("dog"))
-                return dogMove(Integer.parseInt(w[1]));
-            if (w[0].equals("human"))
-                return move;
-        } else {
-            if (b[0].equals("stock"))
-                return stockMove(Integer.parseInt(b[1]), Integer.parseInt(b[2]));
-            if (b[0].equals("dog"))
-                return dogMove(Integer.parseInt(b[1]));
-            if (b[0].equals("human"))
-                return move;
-        }
-        return move;
-    }
-
-    public String dogMove(int depth) {
-        return dog.move(logic, depth, new ArrayList<>(logic.legalMoves)).getMove();
-    }
-
-    public String stockMove(int depth, int diff) {
-        String res = fish.move(logic, depth, diff, move);
-        if (res.equals(""))
-            return "";
-        return res;
+    static <E> E getRandomSetElement(Set<E> set) {
+        return set.stream().skip(new Random().nextInt(set.size())).findFirst().orElse(null);
     }
 
     public String randomMove() {
-        List<Short> temp = new ArrayList<>(logic.legalMoves);
-        Collections.shuffle(temp);
-        if (temp.size() != 0) {
-            return Chess.decodeMove(temp.get(0));
+        if (game.legalMoves.size() == 0) {
+            return "";
         }
-        return move;
-    }
-
-    public void clear() {
-        logic.clear();
-        setFromFEN(logic.fen);
-        snap();
+        return getRandomSetElement(game.legalMoves);
     }
 
     public void mousePressed() {
         for (Button button : buttons)
             button.update();
         if (move.length() == 2) {
-            if (legalMovesFromPiece(move, logic.legalMoves).size() != 0)
+            if (legalMovesFromPiece(move, game.legalMoves).size() != 0)
                 move = finishMoveOnMouseRelease(move);
             else
                 move = "";
@@ -243,7 +210,7 @@ public class ChessGUI extends Scene {
 
     public void mouseReleased() {
         if (move.length() == 2) {
-            if (legalMovesFromPiece(move, logic.legalMoves).size() != 0)
+            if (legalMovesFromPiece(move, game.legalMoves).size() != 0)
                 move = finishMoveOnMouseRelease(move);
             else
                 move = "";
@@ -258,7 +225,6 @@ public class ChessGUI extends Scene {
     public void keyReleased() {
     }
 
-    
     public void setFromParameters(Map<String, Object> parameters) {
         data = (String) parameters.get("data");
         fen = (String) parameters.get("fen");
@@ -266,7 +232,7 @@ public class ChessGUI extends Scene {
             fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         perspective = (String) parameters.get("perspective");
         staticPerspective = (boolean) parameters.get("staticPerspective");
-        setFromFEN(fen);
+        game.setFromFen(fen);
     }
 
     public void flipBoard() {
@@ -625,17 +591,16 @@ public class ChessGUI extends Scene {
         screen.image(images[temp + (team == 0 ? 0 : 1)], (screen.mouseX - 64), (screen.mouseY - 64), 128, 128);
     }
 
-    public Set<Short> legalMovesFromPiece(String location, Set<Short> legalMoves) {
-        Set<Short> res = new HashSet<>();
-        for (short sh : legalMoves) {
-            String str = Chess.decodeMove(sh);
-            if (str.substring(0, 2).equals(location))
-                res.add(sh);
+    public Set<String> legalMovesFromPiece(String location, Set<String> legalMoves) {
+        Set<String> res = new HashSet<>();
+        for (String move : legalMoves) {
+            if (move.substring(0, 2).equals(location))
+                res.add(move);
         }
         return res;
     }
 
-    public void drawLegalMovesFromPiece(String location, Set<Short> legalMoves) {
+    public void drawLegalMovesFromPiece(String location, Set<String> legalMoves) {
         if (location.equals("")) {
             int x = (int) ((((screen.mouseX)) - 448) / 128);
             int y = (int) ((((screen.mouseY)) - 28) / 128);
@@ -648,10 +613,9 @@ public class ChessGUI extends Scene {
             drawLegalMovesFromPiece("" + xFile + yRank, legalMoves);
             return;
         }
-        for (short sh : legalMovesFromPiece(location, legalMoves)) {
-            String str = Chess.decodeMove(sh);
-            int r1 = 8 - Integer.parseInt("" + str.charAt(3));
-            int c1 = convertFileToInt(str.charAt(2));
+        for (String move : legalMovesFromPiece(location, legalMoves)) {
+            int r1 = 8 - Integer.parseInt("" + move.charAt(3));
+            int c1 = convertFileToInt(move.charAt(2));
             int x = (int) ((((screen.mouseX)) - 448) / 128);
             int y = (int) ((((screen.mouseY)) - 28) / 128);
             if (perspective.equals("black")) {

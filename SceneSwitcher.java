@@ -16,7 +16,7 @@ public class SceneSwitcher extends PApplet {
 
     public void settings() {
         for (Scene scn : sceneList) {
-            scn.screen = this;
+            scn.setScreen(this);
             scn.settings();
         }
     }
